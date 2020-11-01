@@ -1,0 +1,15 @@
+{
+    "name": "ThreeDISevenZeroR.XmlUI.Editor",
+    "references": [
+        "GUID:ff3bfae9882fc924b99c8fa4cc4337ee"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
