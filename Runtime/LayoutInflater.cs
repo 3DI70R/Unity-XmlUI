@@ -53,7 +53,7 @@ namespace ThreeDISevenZeroR.XmlUI
         }
 
         public XmlElementComponent Inflate(Transform root, string xmlString,
-            IVariableProvider provider,
+            IVariableProvider provider = null,
             Dictionary<string, string> outerAttrs = null)
         {
             Init();
@@ -87,7 +87,7 @@ namespace ThreeDISevenZeroR.XmlUI
             Init();
 
             var rootNode = ParseXmlElements(xmlString, outerAttrs);
-            var boundAttrs = new BoundVariableCollection();
+            var boundAttrs = new BoundAttributeCollection();
             var newPrefab = CreateInstance(null, root, rootNode, boundAttrs);
 
             if (!boundAttrs.IsEmpty)
@@ -180,8 +180,9 @@ namespace ThreeDISevenZeroR.XmlUI
         private void CreatePrefabRoot()
         {
             var prefabRoot = new GameObject("Prefabs");
-            prefabRoot.transform.parent = transform;
+            prefabRoot.AddComponent<Canvas>();
             prefabRoot.SetActive(false);
+            prefabRoot.transform.SetParent(transform, false);
             prefabRootTransform = prefabRoot.transform;
         }
 
@@ -194,8 +195,6 @@ namespace ThreeDISevenZeroR.XmlUI
             {
                 var result = new ElementNode();
                 var attrs = CollectElementAttributes(element, outerAttrs);
-
-                attrs.TryGetValue(AttrsReferenceId, out result.id);
 
                 result.type = element.Name;
                 result.factory = CreateFactory(element.Name, attrs);
@@ -322,10 +321,9 @@ namespace ThreeDISevenZeroR.XmlUI
         }
 
         private XmlElementComponent CreateInstance(XmlElementComponent elementRoot, Transform root, ElementNode element,
-            BoundVariableCollection binders)
+            BoundAttributeCollection binders)
         {
             var instance = element.factory.Create(root, binders, this, element.ownAttrs);
-            instance.Id = element.id;
 
             if (!elementRoot)
                 elementRoot = instance;
@@ -343,7 +341,16 @@ namespace ThreeDISevenZeroR.XmlUI
                             break;
 
                         default:
-                            instance.AddChild(CreateInstance(elementRoot, instance.ChildParent, node, binders));
+                            var childInstance = CreateInstance(elementRoot, instance.ChildParent, node, binders);
+                            instance.AddChild(childInstance);
+
+                            if (childInstance.TryGetComponent<RectTransform>(out var childTransform))
+                            {
+                                childTransform.sizeDelta = Vector2.zero;
+                                childTransform.anchorMin = Vector2.zero;
+                                childTransform.anchorMax = Vector2.one;
+                            }
+
                             break;
                     }
                 }
@@ -354,7 +361,6 @@ namespace ThreeDISevenZeroR.XmlUI
 
         private class ElementNode
         {
-            public string id;
             public string type;
             public Dictionary<string, string> ownAttrs;
             public IXmlElementFactory factory;

@@ -1,10 +1,68 @@
-﻿using UnityEngine;
+﻿using Facebook.Yoga;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
     public static class AttributeHandlers
     {
+        public static readonly IAttributeHandler<XmlElementComponent> XmlElement =
+            new AttributeHandler<XmlElementComponent>()
+                .SetConstantsSerializable(false)
+                .AddStringProperty("Id", (c, v) => c.Id = v)
+                
+                .AddYogaValue("Left", (c, v) => c.Node.Left = v)
+                .AddYogaValue("Top", (c, v) => c.Node.Top = v)
+                .AddYogaValue("Right", (c, v) => c.Node.Right = v)
+                .AddYogaValue("Bottom", (c, v) => c.Node.Bottom = v)
+                .AddYogaValue("Start", (c, v) => c.Node.Start = v)
+                .AddYogaValue("End", (c, v) => c.Node.End = v)
+                
+                .AddYogaValue("Margin", (c, v) => c.Node.Margin = v)
+                .AddYogaValue("MarginHorizontal", (c, v) => c.Node.MarginHorizontal = v)
+                .AddYogaValue("MarginVertical", (c, v) => c.Node.MarginVertical = v)
+                .AddYogaValue("MarginStart", (c, v) => c.Node.MarginStart = v)
+                .AddYogaValue("MarginEnd", (c, v) => c.Node.MarginEnd = v)
+                .AddYogaValue("MarginTop", (c, v) => c.Node.MarginTop = v)
+                .AddYogaValue("MarginLeft", (c, v) => c.Node.MarginLeft = v)
+                .AddYogaValue("MarginBottom", (c, v) => c.Node.MarginBottom = v)
+                .AddYogaValue("MarginRight", (c, v) => c.Node.MarginRight = v)
+                
+                .AddYogaValue("Padding", (c, v) => c.Node.Padding = v)
+                .AddYogaValue("PaddingHorizontal", (c, v) => c.Node.PaddingHorizontal = v)
+                .AddYogaValue("PaddingVertical", (c, v) => c.Node.PaddingVertical = v)
+                .AddYogaValue("PaddingStart", (c, v) => c.Node.PaddingStart = v)
+                .AddYogaValue("PaddingEnd", (c, v) => c.Node.PaddingEnd = v)
+                .AddYogaValue("PaddingTop", (c, v) => c.Node.PaddingTop = v)
+                .AddYogaValue("PaddingLeft", (c, v) => c.Node.PaddingLeft = v)
+                .AddYogaValue("PaddingBottom", (c, v) => c.Node.PaddingBottom = v)
+                .AddYogaValue("PaddingRight", (c, v) => c.Node.PaddingRight = v)
+                
+                .AddEnumProperty<YogaDirection>("StyleDirection", (c, v) => c.Node.StyleDirection = v)
+                .AddEnumProperty<YogaFlexDirection>("FlexDirection", (c, v) => c.Node.FlexDirection = v)
+                .AddEnumProperty<YogaJustify>("JustifyContent", (c, v) => c.Node.JustifyContent = v)
+                .AddEnumProperty<YogaDisplay>("Display", (c, v) => c.Node.Display = v)
+                .AddEnumProperty<YogaAlign>("AlignItems", (c, v) => c.Node.AlignItems = v)
+                .AddEnumProperty<YogaAlign>("AlignSelf", (c, v) => c.Node.AlignSelf = v)
+                .AddEnumProperty<YogaAlign>("AlignContent", (c, v) => c.Node.AlignContent = v)
+                .AddEnumProperty<YogaPositionType>("PositionType", (c, v) => c.Node.PositionType = v)
+                .AddEnumProperty<YogaWrap>("Wrap", (c, v) => c.Node.Wrap = v)
+                .AddFloatProperty("Flex", (c, v) => c.Node.Flex = v)
+                .AddFloatProperty("FlexGrow", (c, v) => c.Node.FlexGrow = v)
+                .AddFloatProperty("FlexShrink", (c, v) => c.Node.FlexShrink = v)
+                .AddYogaValue("FlexBasis", (c, v) => c.Node.FlexBasis = v)
+                
+                .AddYogaValue("Width", (c, v) => c.Node.Width = v)
+                .AddYogaValue("Height", (c, v) => c.Node.Height = v)
+                .AddYogaValue("MinWidth", (c, v) => c.Node.MinWidth = v)
+                .AddYogaValue("MinHeight", (c, v) => c.Node.MinHeight = v)
+                .AddYogaValue("MaxWidth", (c, v) => c.Node.MaxWidth = v)
+                .AddYogaValue("MaxHeight", (c, v) => c.Node.MaxHeight = v)
+                .AddFloatProperty("AspectRatio", (c, v) => c.Node.AspectRatio = v)
+                .AddEnumProperty<YogaOverflow>("Overflow", (c, v) => c.Node.Overflow = v);
+        
+        // GameObject
+        
         public static readonly IAttributeHandler<GameObject> GameObject = new AttributeHandler<GameObject>()
             .AddBoolProperty("IsActive", (c, v) => c.SetActive(v));
 
@@ -125,6 +183,18 @@ namespace ThreeDISevenZeroR.XmlUI
                     nav.mode = d.navigationMode;
                     o.navigation = nav;
                 });
+
+        public static readonly IAttributeHandler<InputField> InputField = new AttributeHandler<InputField>()
+            .AddIntProperty("CharacterLimit", (c, v) => c.characterLimit = v)
+            .AddEnumProperty<InputField.ContentType>("ContentType", (c, v) => c.contentType = v)
+            .AddEnumProperty<InputField.LineType>("LineType", (c, v) => c.lineType = v)
+            .AddFloatProperty("CaretBlinkRate", (c, v) => c.caretBlinkRate = v)
+            .AddIntProperty("CaretWidth", (c, v) => c.caretWidth = v)
+            .AddBoolProperty("CustomCaretColor", (c, v) => c.customCaretColor = v)
+            .AddColorProperty("CaretColor", (c, v) => c.caretColor = v)
+            .AddColorProperty("SelectionColor", (c, v) => c.selectionColor = v)
+            .AddBoolProperty("HideMobileInput", (c, v) => c.shouldHideMobileInput = v)
+            .AddBoolProperty("ReadOnly", (c, v) => c.readOnly = v);
 
         // -- Graphic
 

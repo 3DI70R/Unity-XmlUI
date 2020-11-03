@@ -9,11 +9,15 @@ namespace ThreeDISevenZeroR.XmlUI
         {
         }
 
-        protected override XmlElementComponent CreateObject(Transform parent, BoundVariableCollection binder,
+        protected override XmlElementComponent CreateObject(Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             var gameObject = new GameObject();
-            gameObject.transform.parent = parent;
+            
+            if (parent is RectTransform)
+                gameObject.AddComponent<RectTransform>();
+            
+            gameObject.transform.SetParent(parent, false);
             
             return gameObject.AddComponent<XmlElementComponent>();
         }

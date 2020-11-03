@@ -16,6 +16,8 @@ namespace ThreeDISevenZeroR.XmlUI
         private readonly List<string> propertyNames =
             new List<string>();
 
+        private bool isConstantsSerializable = true;
+
         public IAttributeInfo[] Attributes => propertyInfos.Cast<IAttributeInfo>().ToArray();
 
         public bool HasRequiredAttributes(Dictionary<string, string> attributes)
@@ -34,7 +36,8 @@ namespace ThreeDISevenZeroR.XmlUI
             var attrs = ParseAttributesInternal(attributes);
             return new AttributeCollection<T>
             {
-                Constants = attrs.Constants.Cast<IConstantSetter<T>>().ToArray(),
+                SerializableConstants = attrs.Constants.Where(c => c.IsSerializable).Cast<IConstantSetter<T>>().ToArray(),
+                NonSerializableConstants = attrs.Constants.Where(c => !c.IsSerializable).Cast<IConstantSetter<T>>().ToArray(),
                 Variables = attrs.Variables.Cast<IVariableBinder<T>>().ToArray()
             };
         }
@@ -47,6 +50,12 @@ namespace ThreeDISevenZeroR.XmlUI
                 propertyInfos[i].propertyParser(ownAttributes, attrs);
 
             return attrs;
+        }
+
+        public AttributeHandler<T> SetConstantsSerializable(bool isSerializable)
+        {
+            isConstantsSerializable = isSerializable;
+            return this;
         }
 
         public AttributeHandler<T> AddResourceProperty<P>(string name, ValueSetterDelegate<T, P> setter) 
@@ -92,7 +101,8 @@ namespace ThreeDISevenZeroR.XmlUI
                     }
                     else if (parser(attrText, out var result))
                     {
-                        props.AddConstant(name, result, setter);
+                        props.AddConstant(name, result, setter, 
+                            isConstantsSerializable);
                     }
                     else
                     {
@@ -130,9 +140,10 @@ namespace ThreeDISevenZeroR.XmlUI
             public readonly List<IVariableBinder<T>> Variables
                 = new List<IVariableBinder<T>>();
             
-            public void AddConstant<P>(string attributeName, P value, ValueSetterDelegate<T, P> apply)
+            public void AddConstant<P>(string attributeName, P value, 
+                ValueSetterDelegate<T, P> apply, bool isInstanceConstant)
             {
-                Constants.Add(new ConstantSetter<T>(new[] {attributeName}, t => apply(t, value)));
+                Constants.Add(new ConstantSetter<T>(new[] {attributeName}, t => apply(t, value), isInstanceConstant));
             }
 
             public void AddVariable<P>(string attributeName, string variableName, ValueSetterDelegate<T, P> apply)
@@ -168,23 +179,27 @@ namespace ThreeDISevenZeroR.XmlUI
             {
                 var parsed = parent.ParseAttributesInternal(ownAttributes);
                 var result = new AttributeCollection<O>();
-                
-                var constants = parsed.Constants;
+
                 var variables = parsed.Variables;
 
-                if (constants.Count > 0)
+                IConstantSetter<O>[] CollectConstants(IEnumerable<ConstantSetter<T>> setters, bool isInstance)
                 {
-                    var constantAttributes = constants
+                    var list = setters.ToList();
+                    
+                    if(list.Count == 0)
+                        return new IConstantSetter<O>[0];
+                    
+                    var attributes = list
                         .SelectMany(c => c.AttributeNames)
                         .ToArray();
 
-                    var delegates = constants
-                        .Select(c => c.Setter)
+                    var delegates = list
+                        .Select(c => c.SetterDelegate)
                         .ToArray();
                     
-                    result.Constants = new IConstantSetter<O>[]
+                    return new IConstantSetter<O>[]
                     {
-                        new ConstantSetter<O>(constantAttributes, o =>
+                        new ConstantSetter<O>(attributes, o =>
                         {
                             batchGetter(o, batchObject);
 
@@ -192,13 +207,12 @@ namespace ThreeDISevenZeroR.XmlUI
                                 d(batchObject);
 
                             batchSetter(o, batchObject);
-                        })
+                        }, isInstance)
                     };
                 }
-                else
-                {
-                    result.Constants = new IConstantSetter<O>[0];
-                }
+
+                result.SerializableConstants = CollectConstants(parsed.Constants.Where(c => !c.IsSerializable), false);
+                result.NonSerializableConstants = CollectConstants(parsed.Constants.Where(c => c.IsSerializable), true);
 
                 if (variables.Count > 0)
                 {

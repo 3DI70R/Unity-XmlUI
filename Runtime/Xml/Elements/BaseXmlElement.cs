@@ -2,25 +2,29 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using Component = UnityEngine.Component;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
     public abstract class BaseXmlElement : IXmlElementInfo
     {
-        private delegate void ObjectBuilder(XmlElementComponent obj, BoundVariableCollection binder);
+        private delegate void ObjectBuilder(XmlElementComponent obj, BoundAttributeCollection binder);
         
         protected readonly List<Action<ObjectBuildFactory, Dictionary<string, string>>> factoryBuildActions = 
             new List<Action<ObjectBuildFactory, Dictionary<string, string>>>();
-        protected readonly List<IAttributeInfo> attributes = new List<IAttributeInfo>();
+        private readonly List<IAttributeInfo> attributes = new List<IAttributeInfo>();
 
         public string Name { get; }
 
         public IAttributeInfo[] Attributes => attributes.ToArray();
+        
+        private bool supportsChildren = true;
 
         public BaseXmlElement(string name)
         {
             Name = name;
+            AddComponent(AttributeHandlers.XmlElement);
         }
 
         private void AddAttributes<T>(params IAttributeHandler<T>[] handlers)
@@ -71,9 +75,16 @@ namespace ThreeDISevenZeroR.XmlUI
             return this;
         }
 
+        public BaseXmlElement SetMeasuredComponent<T>() where T : UIBehaviour
+        {
+            supportsChildren = false;
+            factoryBuildActions.Add((obj, attrs) => { obj.SetMeasuredElement<T>(); });
+            return this;
+        }
+
         public IXmlElementFactory CreateFactory(Dictionary<string, string> attrs)
         {
-            var factory = new ObjectBuildFactory(this, Name);
+            var factory = new ObjectBuildFactory(this, Name, supportsChildren);
             
             for (var i = 0; i < factoryBuildActions.Count; i++) 
                 factoryBuildActions[i](factory, attrs);
@@ -81,7 +92,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return factory;
         }
 
-        protected abstract XmlElementComponent CreateObject(Transform parent, BoundVariableCollection binder,
+        protected abstract XmlElementComponent CreateObject(Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs);
 
         private IAttributeCollection<T> ParseAttributes<T>(IAttributeHandler<T>[] handlers, Dictionary<string, string> attrs)
@@ -89,7 +100,8 @@ namespace ThreeDISevenZeroR.XmlUI
             var parsedAttrs = handlers.Select(h => h.ParseAttributes(attrs)).ToArray();
             return new AttributeCollection<T>
             {
-                Constants = parsedAttrs.SelectMany(a => a.Constants).ToArray(),
+                SerializableConstants = parsedAttrs.SelectMany(a => a.SerializableConstants).ToArray(),
+                NonSerializableConstants = parsedAttrs.SelectMany(a => a.NonSerializableConstants).ToArray(),
                 Variables = parsedAttrs.SelectMany(a => a.Variables).ToArray()
             };
         }
@@ -100,11 +112,15 @@ namespace ThreeDISevenZeroR.XmlUI
 
             private BaseXmlElement parentElement;
             private readonly string gameObjectName;
+            
+            public bool SupportsChildren { get; }
 
-            public ObjectBuildFactory(BaseXmlElement parentElement, string gameObjectName)
+            public ObjectBuildFactory(BaseXmlElement parentElement, string gameObjectName, bool supportsChildren)
             {
                 this.parentElement = parentElement;
                 this.gameObjectName = gameObjectName;
+
+                SupportsChildren = supportsChildren;
             }
 
             public void AddObjectAttributes(IAttributeCollection<GameObject> attrs = null)
@@ -114,11 +130,10 @@ namespace ThreeDISevenZeroR.XmlUI
                 
                 objectBuildActions.Add((prefabObject, binder) =>
                 {
-                    foreach (var c in attrs.Constants)
+                    foreach (var c in attrs.SerializableConstants)
                         c.Apply(prefabObject.gameObject);
 
-                    if (attrs.Variables.Length > 0)
-                        binder.AddAttributes(prefabObject.gameObject, attrs.Variables);
+                    binder.AddAttributes(prefabObject.gameObject, attrs.Variables, attrs.NonSerializableConstants);
                 });
             }
             
@@ -134,15 +149,22 @@ namespace ThreeDISevenZeroR.XmlUI
                     if(attrs.IsEmpty())
                         return;
                     
-                    foreach (var c in attrs.Constants) 
+                    foreach (var c in attrs.SerializableConstants) 
                         c.Apply(component);
 
-                    if (attrs.Variables.Length > 0)
-                        binder.AddAttributes(component, attrs.Variables);
+                    binder.AddAttributes(component, attrs.Variables, attrs.NonSerializableConstants);
                 });
             }
 
-            public XmlElementComponent Create(Transform parent, BoundVariableCollection binders,
+            public void SetMeasuredElement<T>() where T : UIBehaviour
+            {
+                objectBuildActions.Add((prefabObject, binder) =>
+                {
+                    prefabObject.SetMeasuredElement(prefabObject.GetComponent<T>());
+                });
+            }
+
+            public XmlElementComponent Create(Transform parent, BoundAttributeCollection binders,
                 LayoutInflater inflater, Dictionary<string, string> outerAttrs)
             {
                 var newObject = parentElement.CreateObject(parent, binders, inflater, outerAttrs);

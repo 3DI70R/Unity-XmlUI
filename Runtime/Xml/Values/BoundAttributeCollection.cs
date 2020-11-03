@@ -6,7 +6,7 @@ using Object = UnityEngine.Object;
 namespace ThreeDISevenZeroR.XmlUI
 {
     [Serializable]
-    public class BoundVariableCollection
+    public class BoundAttributeCollection
     {
         [SerializeField]
         private List<BoundReference> setters = 
@@ -26,17 +26,27 @@ namespace ThreeDISevenZeroR.XmlUI
             childBinders.Add(binder);
         }
         
-        public void AddAttributes<T>(T component, IVariableBinder<T>[] binders) where T : Object
+        public void AddAttributes<T>(T component, 
+            IVariableBinder<T>[] binders, 
+            IConstantSetter<T>[] constants) where T : Object
         {
-            // TODO: unbind conflicting binders?
+            if(binders.Length == 0 && constants.Length == 0)
+                return;
             
-            var holder = ScriptableObject.CreateInstance<SettersReferenceHolder>();
-            holder.setters = new Func<object, IVariableProvider, IBoundVariable>[binders.Length];
+            var holder = ScriptableObject.CreateInstance<VariableReferenceHolder>();
+            holder.variables = new Func<object, IVariableProvider, IBoundVariable>[binders.Length];
+            holder.constants = new Action<object>[constants.Length];
 
             for (var i = 0; i < binders.Length; i++)
             {
                 var setter = binders[i];
-                holder.setters[i] = (c, p) => setter.Bind((T) c, p);
+                holder.variables[i] = (c, p) => setter.Bind((T) c, p);
+            }
+            
+            for (var i = 0; i < constants.Length; i++)
+            {
+                var setter = constants[i].SetterDelegate;
+                holder.constants[i] = (c) => setter((T) c);
             }
 
             setters.Add(new BoundReference
@@ -44,6 +54,17 @@ namespace ThreeDISevenZeroR.XmlUI
                 target = component,
                 holder = holder
             });
+        }
+
+        public void ApplyConstants()
+        {
+            foreach (var r in setters)
+            {
+                foreach (var c in r.holder.constants)
+                {
+                    c(r.target);
+                }
+            }
         }
         
         public void UnbindFromProvider()
@@ -68,7 +89,7 @@ namespace ThreeDISevenZeroR.XmlUI
 
             foreach (var r in setters)
             {
-                foreach (var s in r.holder.setters)
+                foreach (var s in r.holder.variables)
                 {
                     var bound = s(r.target, provider);
                     bound.Apply();
@@ -83,15 +104,16 @@ namespace ThreeDISevenZeroR.XmlUI
             public Object target;
             
             [HideInInspector]
-            public SettersReferenceHolder holder;
+            public VariableReferenceHolder holder;
         }
-        
+
         // Scriptable object which persists as reference during cloning phase
         // and keeps setters array, which cannot be serialized
         // You still cannot save them as prefab, though
-        private class SettersReferenceHolder : ScriptableObject
+        private class VariableReferenceHolder : ScriptableObject
         {
-            public Func<object, IVariableProvider, IBoundVariable>[] setters;
+            public Action<object>[] constants;
+            public Func<object, IVariableProvider, IBoundVariable>[] variables;
         }
     }
 }

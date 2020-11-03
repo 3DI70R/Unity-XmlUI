@@ -37,12 +37,17 @@ namespace ThreeDISevenZeroR.XmlUI
                     AttributeHandlers.LayoutGroup,
                     AttributeHandlers.HorizontalOrVerticalLayoutGroup));
             
+            AddElement(new PrimitiveXmlElement("Panel")
+                .AddOptionalBackground()
+                .AddGenericProperties());
+
             AddElement(new PrimitiveXmlElement("Text")
                 .AddGenericProperties()
                 .AddComponent<Text>((g, c) => g.font = font,
                     AttributeHandlers.Text,
                     AttributeHandlers.Shadow,
-                    AttributeHandlers.Graphic));
+                    AttributeHandlers.Graphic)
+                .SetMeasuredComponent<Text>());
 
             AddElement(new PrimitiveXmlElement("Image")
                 .AddGenericProperties()

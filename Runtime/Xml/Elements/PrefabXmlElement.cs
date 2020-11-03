@@ -12,7 +12,7 @@ namespace ThreeDISevenZeroR.XmlUI
             prefabElement = prefab;
         }
 
-        protected override XmlElementComponent CreateObject(Transform parent, BoundVariableCollection binder, 
+        protected override XmlElementComponent CreateObject(Transform parent, BoundAttributeCollection binder, 
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             return Object.Instantiate(prefabElement, parent, false);

@@ -12,7 +12,7 @@ namespace ThreeDISevenZeroR.XmlUI
             this.documentXml = documentXml;
         }
 
-        protected override XmlElementComponent CreateObject(Transform parent, BoundVariableCollection binder,
+        protected override XmlElementComponent CreateObject(Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             var element = inflater.Inflate(parent, documentXml, null, outerAttrs);

@@ -5,8 +5,10 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public interface IXmlElementFactory
     {
+        bool SupportsChildren { get; }
+        
         XmlElementComponent Create(Transform root, 
-            BoundVariableCollection collection,
+            BoundAttributeCollection collection,
             LayoutInflater inflater,
             Dictionary<string, string> outerAttrs);
     }

@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Facebook.Yoga;
 using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
@@ -6,7 +7,7 @@ namespace ThreeDISevenZeroR.XmlUI
     public static class XmlUIUtils
     {
         public static bool IsEmpty<T>(this IAttributeCollection<T> c) => 
-            c == null || c.Constants.Length == 0 && c.Variables.Length == 0;
+            c == null || c.SerializableConstants.Length == 0 && c.NonSerializableConstants.Length == 0 && c.Variables.Length == 0;
 
         public static AttributeHandler<T> AddStringProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, string> setter) => 
@@ -31,6 +32,10 @@ namespace ThreeDISevenZeroR.XmlUI
         public static AttributeHandler<T> AddVectorProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, Vector4> setter) => 
             handler.AddGenericProperty(name, "Float, Float, ...", TryParseVector4, setter);
+        
+        public static AttributeHandler<T> AddYogaValue<T>(
+            this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, YogaValue> setter) =>
+            handler.AddGenericProperty(name, "[auto, float, float%]", TryParseYogaValue, setter);
 
         private static bool TryParseInt(string text, out int i) => 
             int.TryParse(text, NumberStyles.Integer | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out i);
@@ -38,6 +43,39 @@ namespace ThreeDISevenZeroR.XmlUI
         private static bool TryParseFloat(string text, out float f) =>
             float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out f);
 
+        private static bool TryParseYogaValue(string text, out YogaValue value)
+        {
+            if (text == "auto")
+            {
+                value = YogaValue.Auto();
+                return true;
+            }
+            
+            var isPercent = text.EndsWith("%");
+
+            if (isPercent)
+            {
+                var numberValue = text.Substring(0, text.Length - 1);
+
+                if (TryParseFloat(numberValue, out var percentValue))
+                {
+                    value = YogaValue.Percent(percentValue);
+                    return true;
+                }
+            }
+            else
+            {
+                if (TryParseFloat(text, out var sizeValue))
+                {
+                    value = YogaValue.Point(sizeValue);
+                    return true;
+                }
+            }
+
+            value = YogaValue.Undefined();
+            return false;
+        }
+        
         private static bool TryParseVector4(string text, out Vector4 vector)
         {
             var values = text.Split(',');
