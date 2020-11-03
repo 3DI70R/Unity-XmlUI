@@ -15,28 +15,6 @@ namespace ThreeDISevenZeroR.XmlUI
                 ? defaultTextFont 
                 : Resources.GetBuiltinResource<Font>("Arial.ttf");
             
-            AddElement(new PrimitiveXmlElement("Horizontal")
-                .AddGenericProperties()
-                .AddOptionalBackground()
-                .AddComponent<HorizontalLayoutGroup>((g, c) =>
-                    {
-                        g.childForceExpandHeight = false;
-                        g.childForceExpandWidth = false;
-                    },
-                    AttributeHandlers.LayoutGroup,
-                    AttributeHandlers.HorizontalOrVerticalLayoutGroup));
-
-            AddElement(new PrimitiveXmlElement("Vertical")
-                .AddGenericProperties()
-                .AddOptionalBackground()
-                .AddComponent<VerticalLayoutGroup>((g, c) =>
-                    {
-                        g.childForceExpandHeight = false;
-                        g.childForceExpandWidth = false;
-                    },
-                    AttributeHandlers.LayoutGroup,
-                    AttributeHandlers.HorizontalOrVerticalLayoutGroup));
-            
             AddElement(new PrimitiveXmlElement("Panel")
                 .AddOptionalBackground()
                 .AddGenericProperties());

@@ -59,7 +59,7 @@ namespace ThreeDISevenZeroR.XmlUI
         }
 
         public AttributeHandler<T> AddResourceProperty<P>(string name, ValueSetterDelegate<T, P> setter) 
-            where P : Object => AddGenericProperty(name, "Unity Resource Path", (string text, out P value) => {
+            where P : Object => AddGenericProperty(name, XmlSchemaTypes.String, (string text, out P value) => {
                 value = Resources.Load<P>(text);
 
                 if (!value)
@@ -69,15 +69,15 @@ namespace ThreeDISevenZeroR.XmlUI
             }, setter);
         
         public AttributeHandler<T> AddEnumProperty<P>(string name, ValueSetterDelegate<T, P> setter) 
-            where P : struct, Enum => AddGenericProperty(name, string.Join("\n", Enum.GetNames(typeof(P))), Enum.TryParse, setter);
+            where P : struct, Enum => AddGenericProperty(name, XmlSchemaTypes.GetEnumSchema<P>(), Enum.TryParse, setter);
 
-        public AttributeHandler<T> AddGenericProperty<P>(string name, string format, StringParser<P> parser, ValueSetterDelegate<T, P> setter)
+        public AttributeHandler<T> AddGenericProperty<P>(string name, XmlTypeSchema schema, StringParser<P> parser, ValueSetterDelegate<T, P> setter)
         {
             propertyNames.Add(name);
             propertyInfos.Add(new PropertyInfo
             {
                 name = name,
-                format = format,
+                schema = schema,
                 type = typeof(P),
                 propertyParser = (values, props) =>
                 {
@@ -122,14 +122,14 @@ namespace ThreeDISevenZeroR.XmlUI
         private class PropertyInfo : IAttributeInfo
         {
             public string name;
-            public string format;
             public Type type;
+            public XmlTypeSchema schema;
             public Action<Dictionary<string, string>, ParsedAttributes> propertyParser;
 
             public string Name => name;
             public Type Type => type;
             public Type TargetType => typeof(T);
-            public string FormatHint => format;
+            public XmlTypeSchema SchemaInfo => schema;
         }
 
         private class ParsedAttributes

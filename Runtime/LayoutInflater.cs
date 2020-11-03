@@ -6,18 +6,18 @@ using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
+    [ExecuteInEditMode]
     public class LayoutInflater : MonoBehaviour
     {
         private const char AttrsDelimeter = ',';
 
-        private const string AttrsReferenceId = "Id";
-        private const string AttrsReferenceAttributeId = "Attrs";
-        private const string AttrsCollectionNameAttributeId = "Attrs.Name";
-        private const string AttrsCollectionParentAttributeId = "Attrs.Parent";
+        public const string AttrsReferenceAttributeId = "Attrs";
+        public const string AttrsCollectionNameAttributeId = "Attrs.Name";
+        public const string AttrsCollectionParentAttributeId = "Attrs.Parent";
 
-        private const string AttrsCollectionElementName = "AttributeCollection";
-        private const string AttrsCollectionEntryName = "Attrs";
-        private const string AttrsChildRootName = "ChildRoot";
+        public const string AttrsCollectionElementName = "AttributeCollection";
+        public const string AttrsCollectionEntryName = "Attrs";
+        public const string AttrsChildRootName = "ChildRoot";
 
         private readonly Dictionary<string, IXmlElementInfo> elementTypes =
             new Dictionary<string, IXmlElementInfo>();
@@ -35,7 +35,14 @@ namespace ThreeDISevenZeroR.XmlUI
 
         [SerializeField] private ElementCollection[] elementCollections;
 
-        public IXmlElementInfo[] RegisteredElements => elementTypes.Values.ToArray();
+        public IXmlElementInfo[] RegisteredElements
+        {
+            get
+            {
+                Init();
+                return elementTypes.Values.ToArray();
+            }
+        }
 
         private Transform prefabRootTransform;
         private bool isInitialized;
@@ -179,6 +186,9 @@ namespace ThreeDISevenZeroR.XmlUI
 
         private void CreatePrefabRoot()
         {
+            if(!Application.isPlaying)
+                return;
+            
             var prefabRoot = new GameObject("Prefabs");
             prefabRoot.AddComponent<Canvas>();
             prefabRoot.SetActive(false);

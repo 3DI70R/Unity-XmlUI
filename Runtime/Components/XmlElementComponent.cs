@@ -97,7 +97,7 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             if(yogaNode != null)
                 return;
-            
+
             yogaNode = new YogaNode();
 
             foreach (var element in childElements)

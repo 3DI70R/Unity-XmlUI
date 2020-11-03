@@ -11,31 +11,31 @@ namespace ThreeDISevenZeroR.XmlUI
 
         public static AttributeHandler<T> AddStringProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, string> setter) => 
-            handler.AddGenericProperty(name, "String", ((string text, out string value) => { value = text; return true; }), setter);
+            handler.AddGenericProperty(name, XmlSchemaTypes.String, ((string text, out string value) => { value = text; return true; }), setter);
 
         public static AttributeHandler<T> AddBoolProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, bool> setter) =>
-            handler.AddGenericProperty(name, "Boolean", bool.TryParse, setter);
+            handler.AddGenericProperty(name, XmlSchemaTypes.Boolean, bool.TryParse, setter);
         
         public static AttributeHandler<T> AddIntProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, int> setter) =>
-            handler.AddGenericProperty(name, "Integer", TryParseInt, setter);
+            handler.AddGenericProperty(name, XmlSchemaTypes.Integer, TryParseInt, setter);
         
         public static AttributeHandler<T> AddFloatProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, float> setter) =>
-            handler.AddGenericProperty(name, "Float", TryParseFloat, setter);
+            handler.AddGenericProperty(name, XmlSchemaTypes.Float, TryParseFloat, setter);
         
         public static AttributeHandler<T> AddColorProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, Color> setter) => 
-            handler.AddGenericProperty(name, "Html color string", ColorUtility.TryParseHtmlString, setter);
+            handler.AddGenericProperty(name, XmlSchemaTypes.String, ColorUtility.TryParseHtmlString, setter);
 
         public static AttributeHandler<T> AddVectorProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, Vector4> setter) => 
-            handler.AddGenericProperty(name, "Float, Float, ...", TryParseVector4, setter);
+            handler.AddGenericProperty(name, XmlSchemaTypes.String, TryParseVector4, setter);
         
         public static AttributeHandler<T> AddYogaValue<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, YogaValue> setter) =>
-            handler.AddGenericProperty(name, "[auto, float, float%]", TryParseYogaValue, setter);
+            handler.AddGenericProperty(name, XmlSchemaTypes.String, TryParseYogaValue, setter);
 
         private static bool TryParseInt(string text, out int i) => 
             int.TryParse(text, NumberStyles.Integer | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out i);

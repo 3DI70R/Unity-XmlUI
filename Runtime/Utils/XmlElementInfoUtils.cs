@@ -12,9 +12,7 @@ namespace ThreeDISevenZeroR.XmlUI
                     AttributeHandlers.Position,
                     AttributeHandlers.Rotation,
                     AttributeHandlers.Scale)
-                .AddOptionalComponent<CanvasGroup>(AttributeHandlers.CanvasGroup)
-                .AddOptionalComponent<LayoutElement>(AttributeHandlers.LayoutElement)
-                .AddOptionalComponent<ContentSizeFitter>(AttributeHandlers.ContentSizeFitter);
+                .AddOptionalComponent<CanvasGroup>(AttributeHandlers.CanvasGroup);
         }
 
         public static BaseXmlElement AddOptionalBackground(this BaseXmlElement element)

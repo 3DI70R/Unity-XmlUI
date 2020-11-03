@@ -18,7 +18,8 @@ namespace ThreeDISevenZeroR.XmlUI
         public string Name { get; }
 
         public IAttributeInfo[] Attributes => attributes.ToArray();
-        
+        public bool SupportsChildren => supportsChildren;
+
         private bool supportsChildren = true;
 
         public BaseXmlElement(string name)

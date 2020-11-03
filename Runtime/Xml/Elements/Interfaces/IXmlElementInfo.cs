@@ -6,6 +6,7 @@ namespace ThreeDISevenZeroR.XmlUI
     {
         string Name { get; }
         IAttributeInfo[] Attributes { get; }
+        bool SupportsChildren { get; }
         
         IXmlElementFactory CreateFactory(Dictionary<string, string> attrs);
     }

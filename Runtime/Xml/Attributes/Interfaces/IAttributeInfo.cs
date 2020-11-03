@@ -8,6 +8,6 @@ namespace ThreeDISevenZeroR.XmlUI
         Type Type { get; }
         Type TargetType { get; }
         
-        string FormatHint { get; }
+        XmlTypeSchema SchemaInfo { get; }
     }
 }
