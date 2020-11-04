@@ -5,17 +5,13 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public static class XmlElementInfoUtils
     {
-        public static BaseXmlElement AddGenericProperties(this BaseXmlElement element)
+        public static BaseXmlElementInfo AddGenericProperties(this BaseXmlElementInfo element)
         {
-            return element.AddObjectHandlers(
-                    AttributeHandlers.GameObject,
-                    AttributeHandlers.Position,
-                    AttributeHandlers.Rotation,
-                    AttributeHandlers.Scale)
+            return element.AddObjectHandlers(AttributeHandlers.GameObject)
                 .AddOptionalComponent<CanvasGroup>(AttributeHandlers.CanvasGroup);
         }
 
-        public static BaseXmlElement AddOptionalBackground(this BaseXmlElement element)
+        public static BaseXmlElementInfo AddOptionalBackground(this BaseXmlElementInfo element)
         {
             return element.AddOptionalComponent<Image>((g, c) => g.type = Image.Type.Sliced, 
                 AttributeHandlers.Image,

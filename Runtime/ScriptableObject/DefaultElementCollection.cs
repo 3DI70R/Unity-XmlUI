@@ -7,7 +7,6 @@ namespace ThreeDISevenZeroR.XmlUI
     public class DefaultElementCollection : ElementCollection
     {
         public Font defaultTextFont;
-        public TextAsset buttonLayout;
 
         protected override void RegisterElements()
         {
@@ -15,11 +14,11 @@ namespace ThreeDISevenZeroR.XmlUI
                 ? defaultTextFont 
                 : Resources.GetBuiltinResource<Font>("Arial.ttf");
             
-            AddElement(new PrimitiveXmlElement("Panel")
+            AddElement(new PrimitiveXmlElementInfo("Panel")
                 .AddOptionalBackground()
                 .AddGenericProperties());
 
-            AddElement(new PrimitiveXmlElement("Text")
+            AddElement(new PrimitiveXmlElementInfo("Text")
                 .AddGenericProperties()
                 .AddComponent<Text>((g, c) => g.font = font,
                     AttributeHandlers.Text,
@@ -27,27 +26,12 @@ namespace ThreeDISevenZeroR.XmlUI
                     AttributeHandlers.Graphic)
                 .SetMeasuredComponent<Text>());
 
-            AddElement(new PrimitiveXmlElement("Image")
+            AddElement(new PrimitiveXmlElementInfo("Image")
                 .AddGenericProperties()
                 .AddComponent<Image>(
                     AttributeHandlers.Image,
                     AttributeHandlers.Shadow,
                     AttributeHandlers.Graphic));
-
-            AddElement(new PrimitiveXmlElement("Space")
-                .AddGenericProperties()
-                .AddComponent<LayoutElement>((e, c) =>
-                {
-                    e.flexibleWidth = 1f;
-                    e.flexibleHeight = 1f;
-                }));
-
-            if (buttonLayout)
-            {
-                AddElement(new LayoutXmlElement("Button", buttonLayout.text)
-                    .AddGenericProperties()
-                    .AddComponent<Button>(AttributeHandlers.Selectable));
-            }
         }
     }
 }

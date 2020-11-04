@@ -7,25 +7,23 @@ using Component = UnityEngine.Component;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    public abstract class BaseXmlElement : IXmlElementInfo
+    public abstract class BaseXmlElementInfo : IXmlElementInfo
     {
-        private delegate void ObjectBuilder(XmlElementComponent obj, BoundAttributeCollection binder);
+        private delegate void ObjectBuilder(LayoutElement obj, BoundAttributeCollection binder);
         
         protected readonly List<Action<ObjectBuildFactory, Dictionary<string, string>>> factoryBuildActions = 
             new List<Action<ObjectBuildFactory, Dictionary<string, string>>>();
         private readonly List<IAttributeInfo> attributes = new List<IAttributeInfo>();
 
         public string Name { get; }
+        public bool SupportsChildren { get; private set; } = true;
 
-        public IAttributeInfo[] Attributes => attributes.ToArray();
-        public bool SupportsChildren => supportsChildren;
+        public virtual IAttributeInfo[] Attributes => attributes.ToArray();
 
-        private bool supportsChildren = true;
-
-        public BaseXmlElement(string name)
+        public BaseXmlElementInfo(string name)
         {
             Name = name;
-            AddComponent(AttributeHandlers.XmlElement);
+            AddComponent(AttributeHandlers.LayoutElement, AttributeHandlers.LayoutElementYogaParams);
         }
 
         private void AddAttributes<T>(params IAttributeHandler<T>[] handlers)
@@ -34,20 +32,20 @@ namespace ThreeDISevenZeroR.XmlUI
                 attributes.AddRange(h.Attributes);
         }
 
-        public BaseXmlElement AddObjectHandlers(params IAttributeHandler<GameObject>[] handlers)
+        public BaseXmlElementInfo AddObjectHandlers(params IAttributeHandler<GameObject>[] handlers)
         {
             AddAttributes(handlers);
             factoryBuildActions.Add((obj, attrs) => obj.AddObjectAttributes(ParseAttributes(handlers, attrs)));
             return this;
         }
 
-        public BaseXmlElement AddComponent<T>(params IAttributeHandler<T>[] handlers)
+        public BaseXmlElementInfo AddComponent<T>(params IAttributeHandler<T>[] handlers)
             where T : Component
         {
             return AddComponent(null, handlers);
         }
 
-        public BaseXmlElement AddComponent<T>(Action<T, XmlElementComponent> configurator, params IAttributeHandler<T>[] handlers) 
+        public BaseXmlElementInfo AddComponent<T>(Action<T, LayoutElement> configurator, params IAttributeHandler<T>[] handlers) 
             where T : Component
         {
             AddAttributes(handlers);
@@ -55,13 +53,13 @@ namespace ThreeDISevenZeroR.XmlUI
             return this;
         }
         
-        public BaseXmlElement AddOptionalComponent<T>(params IAttributeHandler<T>[] handlers)
+        public BaseXmlElementInfo AddOptionalComponent<T>(params IAttributeHandler<T>[] handlers)
             where T : Component
         {
             return AddOptionalComponent(null, handlers);
         }
 
-        public BaseXmlElement AddOptionalComponent<T>(Action<T, XmlElementComponent> configurator, params IAttributeHandler<T>[] handlers)
+        public BaseXmlElementInfo AddOptionalComponent<T>(Action<T, LayoutElement> configurator, params IAttributeHandler<T>[] handlers)
             where T : Component
         {
             AddAttributes(handlers);
@@ -76,16 +74,16 @@ namespace ThreeDISevenZeroR.XmlUI
             return this;
         }
 
-        public BaseXmlElement SetMeasuredComponent<T>() where T : UIBehaviour
+        public BaseXmlElementInfo SetMeasuredComponent<T>() where T : UIBehaviour
         {
-            supportsChildren = false;
+            SupportsChildren = false;
             factoryBuildActions.Add((obj, attrs) => { obj.SetMeasuredElement<T>(); });
             return this;
         }
 
         public IXmlElementFactory CreateFactory(Dictionary<string, string> attrs)
         {
-            var factory = new ObjectBuildFactory(this, Name, supportsChildren);
+            var factory = new ObjectBuildFactory(this, Name, SupportsChildren);
             
             for (var i = 0; i < factoryBuildActions.Count; i++) 
                 factoryBuildActions[i](factory, attrs);
@@ -93,7 +91,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return factory;
         }
 
-        protected abstract XmlElementComponent CreateObject(Transform parent, BoundAttributeCollection binder,
+        protected abstract LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs);
 
         private IAttributeCollection<T> ParseAttributes<T>(IAttributeHandler<T>[] handlers, Dictionary<string, string> attrs)
@@ -111,12 +109,12 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             private readonly List<ObjectBuilder> objectBuildActions = new List<ObjectBuilder>();
 
-            private BaseXmlElement parentElement;
+            private BaseXmlElementInfo parentElement;
             private readonly string gameObjectName;
             
             public bool SupportsChildren { get; }
 
-            public ObjectBuildFactory(BaseXmlElement parentElement, string gameObjectName, bool supportsChildren)
+            public ObjectBuildFactory(BaseXmlElementInfo parentElement, string gameObjectName, bool supportsChildren)
             {
                 this.parentElement = parentElement;
                 this.gameObjectName = gameObjectName;
@@ -138,7 +136,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 });
             }
             
-            public void AddComponent<T>(Action<T, XmlElementComponent> componentConfig, IAttributeCollection<T> attrs = null) where T : Component
+            public void AddComponent<T>(Action<T, LayoutElement> componentConfig, IAttributeCollection<T> attrs = null) where T : Component
             {
                 objectBuildActions.Add((prefabObject, binder) =>
                 {
@@ -165,7 +163,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 });
             }
 
-            public XmlElementComponent Create(Transform parent, BoundAttributeCollection binders,
+            public LayoutElement Create(Transform parent, BoundAttributeCollection binders,
                 LayoutInflater inflater, Dictionary<string, string> outerAttrs)
             {
                 var newObject = parentElement.CreateObject(parent, binders, inflater, outerAttrs);

@@ -3,13 +3,13 @@ using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    public class PrimitiveXmlElement : BaseXmlElement
+    public class PrimitiveXmlElementInfo : BaseXmlElementInfo
     {
-        public PrimitiveXmlElement(string name) : base(name)
+        public PrimitiveXmlElementInfo(string name) : base(name)
         {
         }
 
-        protected override XmlElementComponent CreateObject(Transform parent, BoundAttributeCollection binder,
+        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             var gameObject = new GameObject();
@@ -19,7 +19,7 @@ namespace ThreeDISevenZeroR.XmlUI
             
             gameObject.transform.SetParent(parent, false);
             
-            return gameObject.AddComponent<XmlElementComponent>();
+            return gameObject.AddComponent<LayoutElement>();
         }
     }
 }

@@ -6,60 +6,60 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public static class AttributeHandlers
     {
-        public static readonly IAttributeHandler<XmlElementComponent> XmlElement =
-            new AttributeHandler<XmlElementComponent>()
+        public static readonly IAttributeHandler<LayoutElement> LayoutElement = new AttributeHandler<LayoutElement>()
+            .AddStringProperty("Id", (c, v) => c.Id = v);
+        
+        public static readonly IAttributeHandler<LayoutElement> LayoutElementYogaParams =
+            new AttributeHandler<LayoutElement>()
                 .SetConstantsSerializable(false)
-                .AddStringProperty("Id", (c, v) => c.Id = v)
+                .AddYogaValue("Left", (c, v) => c.OffsetLeft = v)
+                .AddYogaValue("Top", (c, v) => c.OffsetTop = v)
+                .AddYogaValue("Right", (c, v) => c.OffsetRight = v)
+                .AddYogaValue("Bottom", (c, v) => c.OffsetBottom = v)
+                .AddYogaValue("Start", (c, v) => c.OffsetStart = v)
+                .AddYogaValue("End", (c, v) => c.OffsetEnd = v)
                 
-                .AddYogaValue("Left", (c, v) => c.Node.Left = v)
-                .AddYogaValue("Top", (c, v) => c.Node.Top = v)
-                .AddYogaValue("Right", (c, v) => c.Node.Right = v)
-                .AddYogaValue("Bottom", (c, v) => c.Node.Bottom = v)
-                .AddYogaValue("Start", (c, v) => c.Node.Start = v)
-                .AddYogaValue("End", (c, v) => c.Node.End = v)
+                .AddYogaValue("Margin", (c, v) => c.Margin = v)
+                .AddYogaValue("MarginHorizontal", (c, v) => c.MarginHorizontal = v)
+                .AddYogaValue("MarginVertical", (c, v) => c.MarginVertical = v)
+                .AddYogaValue("MarginStart", (c, v) => c.MarginStart = v)
+                .AddYogaValue("MarginEnd", (c, v) => c.MarginEnd = v)
+                .AddYogaValue("MarginTop", (c, v) => c.MarginTop = v)
+                .AddYogaValue("MarginLeft", (c, v) => c.MarginLeft = v)
+                .AddYogaValue("MarginBottom", (c, v) => c.MarginBottom = v)
+                .AddYogaValue("MarginRight", (c, v) => c.MarginRight = v)
                 
-                .AddYogaValue("Margin", (c, v) => c.Node.Margin = v)
-                .AddYogaValue("MarginHorizontal", (c, v) => c.Node.MarginHorizontal = v)
-                .AddYogaValue("MarginVertical", (c, v) => c.Node.MarginVertical = v)
-                .AddYogaValue("MarginStart", (c, v) => c.Node.MarginStart = v)
-                .AddYogaValue("MarginEnd", (c, v) => c.Node.MarginEnd = v)
-                .AddYogaValue("MarginTop", (c, v) => c.Node.MarginTop = v)
-                .AddYogaValue("MarginLeft", (c, v) => c.Node.MarginLeft = v)
-                .AddYogaValue("MarginBottom", (c, v) => c.Node.MarginBottom = v)
-                .AddYogaValue("MarginRight", (c, v) => c.Node.MarginRight = v)
+                .AddYogaValue("Padding", (c, v) => c.Padding = v)
+                .AddYogaValue("PaddingHorizontal", (c, v) => c.PaddingHorizontal = v)
+                .AddYogaValue("PaddingVertical", (c, v) => c.PaddingVertical = v)
+                .AddYogaValue("PaddingStart", (c, v) => c.PaddingStart = v)
+                .AddYogaValue("PaddingEnd", (c, v) => c.PaddingEnd = v)
+                .AddYogaValue("PaddingTop", (c, v) => c.PaddingTop = v)
+                .AddYogaValue("PaddingLeft", (c, v) => c.PaddingLeft = v)
+                .AddYogaValue("PaddingBottom", (c, v) => c.PaddingBottom = v)
+                .AddYogaValue("PaddingRight", (c, v) => c.PaddingRight = v)
                 
-                .AddYogaValue("Padding", (c, v) => c.Node.Padding = v)
-                .AddYogaValue("PaddingHorizontal", (c, v) => c.Node.PaddingHorizontal = v)
-                .AddYogaValue("PaddingVertical", (c, v) => c.Node.PaddingVertical = v)
-                .AddYogaValue("PaddingStart", (c, v) => c.Node.PaddingStart = v)
-                .AddYogaValue("PaddingEnd", (c, v) => c.Node.PaddingEnd = v)
-                .AddYogaValue("PaddingTop", (c, v) => c.Node.PaddingTop = v)
-                .AddYogaValue("PaddingLeft", (c, v) => c.Node.PaddingLeft = v)
-                .AddYogaValue("PaddingBottom", (c, v) => c.Node.PaddingBottom = v)
-                .AddYogaValue("PaddingRight", (c, v) => c.Node.PaddingRight = v)
+                .AddEnumProperty<YogaDirection>("StyleDirection", (c, v) => c.StyleDirection = v)
+                .AddEnumProperty<YogaFlexDirection>("FlexDirection", (c, v) => c.FlexDirection = v)
+                .AddEnumProperty<YogaJustify>("JustifyContent", (c, v) => c.JustifyContent = v)
+                .AddEnumProperty<YogaAlign>("AlignItems", (c, v) => c.AlignItems = v)
+                .AddEnumProperty<YogaAlign>("AlignSelf", (c, v) => c.AlignSelf = v)
+                .AddEnumProperty<YogaAlign>("AlignContent", (c, v) => c.AlignContent = v)
+                .AddEnumProperty<YogaPositionType>("PositionType", (c, v) => c.PositionType = v)
+                .AddEnumProperty<YogaWrap>("Wrap", (c, v) => c.Wrap = v)
+                .AddFloatProperty("Flex", (c, v) => c.Flex = v)
+                .AddFloatProperty("FlexGrow", (c, v) => c.FlexGrow = v)
+                .AddFloatProperty("FlexShrink", (c, v) => c.FlexShrink = v)
+                .AddYogaValue("FlexBasis", (c, v) => c.FlexBasis = v)
                 
-                .AddEnumProperty<YogaDirection>("StyleDirection", (c, v) => c.Node.StyleDirection = v)
-                .AddEnumProperty<YogaFlexDirection>("FlexDirection", (c, v) => c.Node.FlexDirection = v)
-                .AddEnumProperty<YogaJustify>("JustifyContent", (c, v) => c.Node.JustifyContent = v)
-                .AddEnumProperty<YogaDisplay>("Display", (c, v) => c.Node.Display = v)
-                .AddEnumProperty<YogaAlign>("AlignItems", (c, v) => c.Node.AlignItems = v)
-                .AddEnumProperty<YogaAlign>("AlignSelf", (c, v) => c.Node.AlignSelf = v)
-                .AddEnumProperty<YogaAlign>("AlignContent", (c, v) => c.Node.AlignContent = v)
-                .AddEnumProperty<YogaPositionType>("PositionType", (c, v) => c.Node.PositionType = v)
-                .AddEnumProperty<YogaWrap>("Wrap", (c, v) => c.Node.Wrap = v)
-                .AddFloatProperty("Flex", (c, v) => c.Node.Flex = v)
-                .AddFloatProperty("FlexGrow", (c, v) => c.Node.FlexGrow = v)
-                .AddFloatProperty("FlexShrink", (c, v) => c.Node.FlexShrink = v)
-                .AddYogaValue("FlexBasis", (c, v) => c.Node.FlexBasis = v)
-                
-                .AddYogaValue("Width", (c, v) => c.Node.Width = v)
-                .AddYogaValue("Height", (c, v) => c.Node.Height = v)
-                .AddYogaValue("MinWidth", (c, v) => c.Node.MinWidth = v)
-                .AddYogaValue("MinHeight", (c, v) => c.Node.MinHeight = v)
-                .AddYogaValue("MaxWidth", (c, v) => c.Node.MaxWidth = v)
-                .AddYogaValue("MaxHeight", (c, v) => c.Node.MaxHeight = v)
-                .AddFloatProperty("AspectRatio", (c, v) => c.Node.AspectRatio = v)
-                .AddEnumProperty<YogaOverflow>("Overflow", (c, v) => c.Node.Overflow = v);
+                .AddYogaValue("Width", (c, v) => c.Width = v)
+                .AddYogaValue("Height", (c, v) => c.Height = v)
+                .AddYogaValue("MinWidth", (c, v) => c.MinWidth = v)
+                .AddYogaValue("MinHeight", (c, v) => c.MinHeight = v)
+                .AddYogaValue("MaxWidth", (c, v) => c.MaxWidth = v)
+                .AddYogaValue("MaxHeight", (c, v) => c.MaxHeight = v)
+                .AddFloatProperty("AspectRatio", (c, v) => c.AspectRatio = v)
+                .AddEnumProperty<YogaOverflow>("Overflow", (c, v) => c.Overflow = v);
         
         // GameObject
         
@@ -97,57 +97,6 @@ namespace ThreeDISevenZeroR.XmlUI
             .AddFloatProperty("Alpha", (c, v) => c.alpha = v)
             .AddBoolProperty("BlocksRaycasts", (c, v) => c.blocksRaycasts = v)
             .AddBoolProperty("Interactable", (c, v) => c.interactable = v);
-
-        // Layout
-        
-        public static readonly IAttributeHandler<ContentSizeFitter> ContentSizeFitter = 
-            new AttributeHandler<ContentSizeFitter>()
-                .AddEnumProperty<ContentSizeFitter.FitMode>("HorizontalFit", (c, v) => c.horizontalFit = v)
-                .AddEnumProperty<ContentSizeFitter.FitMode>("VerticalFit", (c, v) => c.verticalFit = v);
-
-        public static readonly IAttributeHandler<LayoutElement> LayoutElement = new AttributeHandler<LayoutElement>()
-            .AddFloatProperty("MinWidth", (c, v) => c.minWidth = v)
-            .AddFloatProperty("MinHeight", (c, v) => c.minHeight = v)
-            .AddFloatProperty("PreferredWidth", (c, v) => c.preferredWidth = v)
-            .AddFloatProperty("PreferredHeight", (c, v) => c.preferredHeight = v)
-            .AddFloatProperty("FlexibleWidth", (c, v) => c.flexibleWidth = v)
-            .AddFloatProperty("FlexibleHeight", (c, v) => c.flexibleHeight = v);
-
-        public static readonly IAttributeHandler<HorizontalOrVerticalLayoutGroup> HorizontalOrVerticalLayoutGroup =
-            new AttributeHandler<HorizontalOrVerticalLayoutGroup>()
-                .AddBoolProperty("ReverseArrangement", (c, v) => c.reverseArrangement = v)
-                .AddBoolProperty("ChildControlWidth", (c, v) => c.childControlWidth = v)
-                .AddBoolProperty("ChildControlHeight", (c, v) => c.childControlHeight = v)
-                .AddBoolProperty("ChildScaleWidth", (c, v) => c.childScaleWidth = v)
-                .AddBoolProperty("ChildScaleHeight", (c, v) => c.childScaleHeight = v)
-                .AddBoolProperty("ChildForceExpandWidth", (c, v) => c.childForceExpandWidth = v)
-                .AddBoolProperty("ChildForceExpandHeight", (c, v) => c.childForceExpandHeight = v)
-                .AddIntProperty("Spacing", (c, v) => c.spacing = v);
-
-        public static readonly IAttributeHandler<LayoutGroup> LayoutGroup = new AttributeHandler<GroupBatch>()
-            .AddEnumProperty<TextAnchor>("ChildAlignment", (c, v) => c.childAlignment = v)
-            .AddIntProperty("Padding", (c, v) => { c.left = v; c.right = v; c.top = v; c.bottom = v; })
-            .AddIntProperty("PaddingHorizontal", (c, v) => { c.left = v; c.right = v; })
-            .AddIntProperty("PaddingVertical", (c, v) => { c.top = v; c.bottom = v; })
-            .AddIntProperty("PaddingLeft", (c, v) => c.left = v)
-            .AddIntProperty("PaddingRight", (c, v) => c.right = v)
-            .AddIntProperty("PaddingTop", (c, v) => c.top = v)
-            .AddIntProperty("PaddingBottom", (c, v) => c.bottom = v)
-            .AsBatchForObject<LayoutGroup>(new GroupBatch(),
-                getter: (o, b) =>
-                {
-                    var p = o.padding;
-                    b.left = p.left;
-                    b.right = p.right;
-                    b.top = p.top;
-                    b.bottom = p.bottom;
-                    b.childAlignment = o.childAlignment;
-                },
-                setter: (o, b) =>
-                {
-                    o.padding = new RectOffset(b.left, b.right, b.top, b.bottom);
-                    o.childAlignment = b.childAlignment;
-                });
         
         // Interactable
 
@@ -279,16 +228,7 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             public Vector3 value;
         }
-        
-        private class GroupBatch
-        {
-            public int left;
-            public int right;
-            public int top;
-            public int bottom;
-            public TextAnchor childAlignment;
-        }
-        
+
         private class EffectBatch
         {
             public Shadow existingShadow;

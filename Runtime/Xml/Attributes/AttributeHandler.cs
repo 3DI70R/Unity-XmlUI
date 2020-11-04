@@ -59,7 +59,7 @@ namespace ThreeDISevenZeroR.XmlUI
         }
 
         public AttributeHandler<T> AddResourceProperty<P>(string name, ValueSetterDelegate<T, P> setter) 
-            where P : Object => AddGenericProperty(name, XmlSchemaTypes.String, (string text, out P value) => {
+            where P : Object => AddGenericProperty(name, XmlTypeSchema.String, (string text, out P value) => {
                 value = Resources.Load<P>(text);
 
                 if (!value)
@@ -69,7 +69,7 @@ namespace ThreeDISevenZeroR.XmlUI
             }, setter);
         
         public AttributeHandler<T> AddEnumProperty<P>(string name, ValueSetterDelegate<T, P> setter) 
-            where P : struct, Enum => AddGenericProperty(name, XmlSchemaTypes.GetEnumSchema<P>(), Enum.TryParse, setter);
+            where P : struct, Enum => AddGenericProperty(name, XmlTypeSchema.GetEnumSchema<P>(), Enum.TryParse, setter);
 
         public AttributeHandler<T> AddGenericProperty<P>(string name, XmlTypeSchema schema, StringParser<P> parser, ValueSetterDelegate<T, P> setter)
         {

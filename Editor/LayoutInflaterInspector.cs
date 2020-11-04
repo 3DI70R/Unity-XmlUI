@@ -12,8 +12,6 @@ namespace ThreeDISevenZeroR.XmlUI
     [CustomEditor(typeof(LayoutInflater))]
     public class LayoutInflaterEditor : Editor
     {
-        private readonly HashSet<string> expandedGroups = new HashSet<string>();
-        
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
@@ -21,58 +19,13 @@ namespace ThreeDISevenZeroR.XmlUI
             var inflater = (LayoutInflater) target;
 
             EditorGUILayout.Space(32);
-            EditorGUILayout.LabelField("Element attributes", EditorStyles.centeredGreyMiniLabel);
-            EditorGUILayout.BeginVertical();
-
-            foreach (var element in inflater.RegisteredElements)
-            {
-                var wasExpanded = expandedGroups.Contains(element.Name);
-                var isExpanded = EditorGUILayout.BeginFoldoutHeaderGroup(wasExpanded, element.Name);
-
-                if (isExpanded != wasExpanded)
-                {
-                    if (isExpanded)
-                    {
-                        expandedGroups.Add(element.Name);
-                    }
-                    else
-                    {
-                        expandedGroups.Remove(element.Name);
-                    }
-                }
-
-                if (isExpanded)
-                    DrawAttributes(element);
-                
-                EditorGUILayout.EndFoldoutHeaderGroup();
-            }
-
             if (GUILayout.Button("Generate .XSD schema (For IDE autocompletion)"))
             {
-                var schemaString = GenerateXmlSchema(inflater.RegisteredElements);
+                var schemaString = GenerateXmlSchema(inflater.GetRegisteredElements());
                 var selectedPath = EditorUtility.OpenFilePanel("Save .xsd file", null, "xsd");
 
                 if (selectedPath != null)
                     File.WriteAllText(selectedPath, schemaString);
-            }
-
-            EditorGUILayout.EndVertical();
-        }
-
-        private void DrawAttributes(IXmlElementInfo element)
-        {
-            foreach (var groups in element.Attributes.GroupBy(e => e.TargetType))
-            {
-                EditorGUILayout.LabelField(groups.Key.Name, EditorStyles.miniLabel);
-
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                foreach (var attr in groups)
-                {
-                    /*EditorGUILayout.LabelField($"{attr.Name}:", attr.FormatHint, 
-                        EditorStyles.wordWrappedMiniLabel);*/
-                }
-                
-                EditorGUILayout.EndVertical();
             }
         }
 
@@ -224,30 +177,45 @@ namespace ThreeDISevenZeroR.XmlUI
                 new XAttribute("type", attr.SchemaInfo.typeName));
         }
 
-        private XElement GetSchemaTypeElement(XmlTypeSchema schema)
+        private XElement GetAutocompleteRestrictionElement(string baseType, string[] entries)
         {
-            var typeElement = new XElement(SchemaNamespace + "simpleType", 
-                new XAttribute("name", schema.typeName));
-            
+            var typeElement = new XElement(SchemaNamespace + "simpleType");
             var restrictionElement = new XElement(SchemaNamespace + "restriction", 
-                new XAttribute("base", XS + ":" + schema.baseType));
-            
+                new XAttribute("base", XS + ":" + baseType));
             typeElement.Add(restrictionElement);
-            
-            if (schema.validationRegex != null)
+
+            if (entries != null)
             {
-                restrictionElement.Add(new XElement(SchemaNamespace + "pattern", 
-                    new XAttribute("value", schema.validationRegex)));
-            }
-            
-            if (schema.autocompleteValues != null)
-            {
-                foreach (var value in schema.autocompleteValues)
+                foreach (var value in entries)
                 {
                     restrictionElement.Add(new XElement(SchemaNamespace + "enumeration", 
                         new XAttribute("value", value)));
                 }
             }
+
+            return typeElement;
+        }
+
+        private XElement GetRegexRestrictionElement(string baseType, string regex)
+        {
+            return new XElement(SchemaNamespace + "simpleType", 
+                new XElement(SchemaNamespace + "restriction", new XAttribute("base", XS + ":" + baseType),
+                    new XElement(SchemaNamespace + "pattern", new XAttribute("value", regex))));
+        }
+
+        private XElement GetSchemaTypeElement(XmlTypeSchema schema)
+        {
+            var typeElement = new XElement(SchemaNamespace + "simpleType", 
+                new XAttribute("name", schema.typeName));
+            
+            var unionElement = new XElement(SchemaNamespace + "union");
+            typeElement.Add(unionElement);
+            
+            unionElement.Add(GetAutocompleteRestrictionElement(schema.baseType, schema.autocompleteValues));
+            unionElement.Add(GetRegexRestrictionElement("string", "@|\\$.+")); // Variables and placeholders
+            
+            if (schema.validationRegex != null)
+                unionElement.Add(GetRegexRestrictionElement("string", schema.validationRegex));
 
             return typeElement;
         }

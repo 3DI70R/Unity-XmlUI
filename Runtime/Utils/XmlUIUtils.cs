@@ -1,9 +1,16 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Xml;
 using Facebook.Yoga;
 using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
+    public delegate void BatchGetter<O, B>(O instance, B batch);
+    public delegate void BatchSetter<O, B>(O instance, B batch);
+    public delegate void ValueSetterDelegate<in T, in P>(T instance, P value);
+    
     public static class XmlUIUtils
     {
         public static bool IsEmpty<T>(this IAttributeCollection<T> c) => 
@@ -11,31 +18,31 @@ namespace ThreeDISevenZeroR.XmlUI
 
         public static AttributeHandler<T> AddStringProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, string> setter) => 
-            handler.AddGenericProperty(name, XmlSchemaTypes.String, ((string text, out string value) => { value = text; return true; }), setter);
+            handler.AddGenericProperty(name, XmlTypeSchema.String, ((string text, out string value) => { value = text; return true; }), setter);
 
         public static AttributeHandler<T> AddBoolProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, bool> setter) =>
-            handler.AddGenericProperty(name, XmlSchemaTypes.Boolean, bool.TryParse, setter);
+            handler.AddGenericProperty(name, XmlTypeSchema.Boolean, bool.TryParse, setter);
         
         public static AttributeHandler<T> AddIntProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, int> setter) =>
-            handler.AddGenericProperty(name, XmlSchemaTypes.Integer, TryParseInt, setter);
+            handler.AddGenericProperty(name, XmlTypeSchema.Integer, TryParseInt, setter);
         
         public static AttributeHandler<T> AddFloatProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, float> setter) =>
-            handler.AddGenericProperty(name, XmlSchemaTypes.Float, TryParseFloat, setter);
+            handler.AddGenericProperty(name, XmlTypeSchema.Float, TryParseFloat, setter);
         
         public static AttributeHandler<T> AddColorProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, Color> setter) => 
-            handler.AddGenericProperty(name, XmlSchemaTypes.String, ColorUtility.TryParseHtmlString, setter);
+            handler.AddGenericProperty(name, XmlTypeSchema.HtmlColor, ColorUtility.TryParseHtmlString, setter);
 
         public static AttributeHandler<T> AddVectorProperty<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, Vector4> setter) => 
-            handler.AddGenericProperty(name, XmlSchemaTypes.String, TryParseVector4, setter);
+            handler.AddGenericProperty(name, XmlTypeSchema.String, TryParseVector4, setter);
         
         public static AttributeHandler<T> AddYogaValue<T>(
             this AttributeHandler<T> handler, string name, ValueSetterDelegate<T, YogaValue> setter) =>
-            handler.AddGenericProperty(name, XmlSchemaTypes.String, TryParseYogaValue, setter);
+            handler.AddGenericProperty(name, XmlTypeSchema.YogaValue, TryParseYogaValue, setter);
 
         private static bool TryParseInt(string text, out int i) => 
             int.TryParse(text, NumberStyles.Integer | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out i);
@@ -45,7 +52,7 @@ namespace ThreeDISevenZeroR.XmlUI
 
         private static bool TryParseYogaValue(string text, out YogaValue value)
         {
-            if (text == "auto")
+            if (text.Equals("auto", StringComparison.InvariantCultureIgnoreCase))
             {
                 value = YogaValue.Auto();
                 return true;
@@ -96,6 +103,31 @@ namespace ThreeDISevenZeroR.XmlUI
             }
 
             return true;
+        }
+
+        public static List<string> GetPlaceholderAttrs(string xmlLayout)
+        {
+            var result = new List<string>();
+
+            void CollectPlaceholders(XmlElement element)
+            {
+                foreach (XmlAttribute attribute in element.Attributes)
+                {
+                    if (attribute.Value.StartsWith("@"))
+                        result.Add(attribute.Value.Substring(1));
+                }
+
+                foreach (XmlNode child in element.ChildNodes)
+                {
+                    if(child is XmlElement childElement)
+                        CollectPlaceholders(childElement);
+                }
+            }
+
+            var doc = new XmlDocument();
+            doc.LoadXml(xmlLayout);
+            CollectPlaceholders(doc.DocumentElement);
+            return result;
         }
     }
 }

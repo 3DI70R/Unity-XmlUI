@@ -22,8 +22,8 @@ namespace ThreeDISevenZeroR.XmlUI
         private readonly Dictionary<string, IXmlElementInfo> elementTypes =
             new Dictionary<string, IXmlElementInfo>();
 
-        private readonly Dictionary<string, XmlElementComponent> createdPrefabs =
-            new Dictionary<string, XmlElementComponent>();
+        private readonly Dictionary<string, LayoutElement> createdPrefabs =
+            new Dictionary<string, LayoutElement>();
 
         private readonly Dictionary<string, AttrsCollectionNode> attributeDictionary =
             new Dictionary<string, AttrsCollectionNode>();
@@ -35,22 +35,21 @@ namespace ThreeDISevenZeroR.XmlUI
 
         [SerializeField] private ElementCollection[] elementCollections;
 
-        public IXmlElementInfo[] RegisteredElements
-        {
-            get
-            {
-                Init();
-                return elementTypes.Values.ToArray();
-            }
-        }
-
         private Transform prefabRootTransform;
         private bool isInitialized;
+        
+        public IXmlElementInfo[] GetRegisteredElements()
+        {
+            return elementCollections.SelectMany(e => e.Elements).ToArray();
+        }
 
         public void Init()
         {
             if (isInitialized)
                 return;
+
+            foreach (var element in GetRegisteredElements())
+                RegisterElement(element);
 
             AddAttributeCollection(attributeCollections);
             AddElements(elementCollections);
@@ -59,13 +58,13 @@ namespace ThreeDISevenZeroR.XmlUI
             isInitialized = true;
         }
 
-        public XmlElementComponent Inflate(Transform root, string xmlString,
+        public LayoutElement Inflate(Transform root, string xmlString,
             IVariableProvider provider = null,
             Dictionary<string, string> outerAttrs = null)
         {
             Init();
 
-            XmlElementComponent instance;
+            LayoutElement instance;
 
             if (outerAttrs == null)
             {
@@ -88,7 +87,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return instance;
         }
 
-        public XmlElementComponent CreateInstance(Transform root, string xmlString,
+        public LayoutElement CreateInstance(Transform root, string xmlString,
             Dictionary<string, string> outerAttrs)
         {
             Init();
@@ -207,8 +206,10 @@ namespace ThreeDISevenZeroR.XmlUI
                 var attrs = CollectElementAttributes(element, outerAttrs);
 
                 result.type = element.Name;
-                result.factory = CreateFactory(element.Name, attrs);
                 result.ownAttrs = attrs;
+                
+                if(element.Name != AttrsChildRootName)
+                    result.factory = CreateFactory(element.Name, attrs);
 
                 for (var i = 0; i < element.ChildNodes.Count; i++)
                 {
@@ -330,10 +331,11 @@ namespace ThreeDISevenZeroR.XmlUI
             return type.CreateFactory(attrs);
         }
 
-        private XmlElementComponent CreateInstance(XmlElementComponent elementRoot, Transform root, ElementNode element,
+        private LayoutElement CreateInstance(LayoutElement elementRoot, Transform root, ElementNode element,
             BoundAttributeCollection binders)
         {
             var instance = element.factory.Create(root, binders, this, element.ownAttrs);
+            var container = instance.Container;
 
             if (!elementRoot)
                 elementRoot = instance;
@@ -347,12 +349,12 @@ namespace ThreeDISevenZeroR.XmlUI
                     switch (node.type)
                     {
                         case AttrsChildRootName:
-                            elementRoot.SetChildRoot(instance);
+                            elementRoot.Container = instance;
                             break;
 
                         default:
-                            var childInstance = CreateInstance(elementRoot, instance.ChildParent, node, binders);
-                            instance.AddChild(childInstance);
+                            var childInstance = CreateInstance(elementRoot, container.ChildParentTransform, node, binders);
+                            container.AddChild(childInstance);
 
                             if (childInstance.TryGetComponent<RectTransform>(out var childTransform))
                             {

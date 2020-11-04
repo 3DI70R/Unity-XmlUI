@@ -3,16 +3,16 @@ using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    public class PrefabXmlElement : BaseXmlElement
+    public class PrefabXmlElementInfo : BaseXmlElementInfo
     {
-        private readonly XmlElementComponent prefabElement;
+        private readonly LayoutElement prefabElement;
         
-        public PrefabXmlElement(string name, XmlElementComponent prefab) : base(name)
+        public PrefabXmlElementInfo(string name, LayoutElement prefab) : base(name)
         {
             prefabElement = prefab;
         }
 
-        protected override XmlElementComponent CreateObject(Transform parent, BoundAttributeCollection binder, 
+        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder, 
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             return Object.Instantiate(prefabElement, parent, false);
