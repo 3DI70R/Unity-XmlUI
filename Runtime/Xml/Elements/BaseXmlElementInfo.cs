@@ -167,6 +167,10 @@ namespace ThreeDISevenZeroR.XmlUI
                 LayoutInflater inflater, Dictionary<string, string> outerAttrs)
             {
                 var newObject = parentElement.CreateObject(parent, binders, inflater, outerAttrs);
+                
+                newObject.RectTransform.anchorMin = new Vector2(0, 1); // Top left
+                newObject.RectTransform.anchorMax = new Vector2(0, 1);
+                newObject.RectTransform.pivot = new Vector2(0.5f, 0.5f); // Center
                 newObject.gameObject.name = gameObjectName;
 
                 for (var i = 0; i < objectBuildActions.Count; i++) 

@@ -17,26 +17,11 @@ namespace ThreeDISevenZeroR.XmlUI
 
         public LayoutElement Container
         {
-            get
-            {
-                if (childContainer)
-                    return childContainer.Container;
-                
-                return this;
-            }
-            set
-            {
-                childContainer = value == this ? null : value;
-            }
+            get => childContainer ? childContainer.Container : this;
+            set => childContainer = value == this ? null : value;
         }
 
-        public Transform ChildParentTransform
-        {
-            get
-            {
-                return transform;
-            }
-        }
+        public Transform ChildParentTransform => Container.transform;
 
         private YogaNode Node
         {
@@ -110,19 +95,23 @@ namespace ThreeDISevenZeroR.XmlUI
         private LayoutElement childContainer;
 
         [SerializeField]
+        [HideInInspector]
         private LayoutElement parentElement;
         
         [SerializeField]
         private string componentId;
 
         [SerializeField]
+        [HideInInspector]
         private List<LayoutElement> childElements 
             = new List<LayoutElement>();
         
         [SerializeField]
+        [HideInInspector]
         private UIBehaviour measuredElement;
         
         [SerializeField]
+        [HideInInspector]
         private YogaMeasureDirtyWatcher measuredElementDirtyMarker;
 
         private bool autoUpdateLayout = true;
@@ -136,7 +125,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return Node.Print(YogaPrintOptions.Style);
         }
 
-        private RectTransform RectTransform
+        public RectTransform RectTransform
         {
             get
             {
@@ -144,12 +133,83 @@ namespace ThreeDISevenZeroR.XmlUI
                 return rectTransformRef;
             }
         }
-
-        private void Awake()
+        
+        public T FindComponentById<T>(string id)
         {
-            RectTransform.anchorMin = new Vector2(0, 1); // Top left
-            RectTransform.anchorMax = new Vector2(0, 1);
-            RectTransform.pivot = new Vector2(0, 1);
+            if (Id == id && TryGetComponent<T>(out var result))
+                return result;
+
+            for (var i = 0; i < childElements.Count; i++)
+            {
+                var foundElement = childElements[i].FindComponentById<T>(id);
+
+                if (foundElement != null)
+                    return foundElement;
+            }
+            
+            return default;
+        }
+
+        public void DetachFromParent()
+        {
+            SetParent(null);
+        }
+        
+        public void CalculateLayout()
+        {
+            if (Node.IsDirty)
+            {
+                Node.CalculateLayout();
+                OnLayoutUpdated();
+            }
+        }
+        
+        public void SetMeasuredElement(UIBehaviour element)
+        {
+            this.measuredElement = element;
+        }
+        
+        public void MoveChild(LayoutElement child, int newIndex)
+        {
+            var childIndex = childElements.IndexOf(child);
+
+            if (childIndex >= 0)
+            {
+                childElements.RemoveAt(childIndex);
+                Node.RemoveAt(childIndex);
+                
+                childElements.Insert(newIndex, child);
+                Node.Insert(newIndex, child.Node);
+            }
+        }
+
+        public void InsertChild(LayoutElement child, int index)
+        {
+            if(childElements.Contains(child))
+                return;
+            
+            child.SetParent(this);
+            Node.Insert(index, child.Node);
+            childElements.Insert(index, child);
+        }
+
+        public void AddChild(LayoutElement child)
+        {
+            if(childElements.Contains(child))
+                return;
+            
+            child.SetParent(this);
+            Node.AddChild(child.Node);
+            childElements.Add(child);
+        }
+
+        public void RemoveChild(LayoutElement child)
+        {
+            if (childElements.Remove(child))
+            {
+                child.SetParent(null);
+                Node.RemoveChild(child.Node);
+            }
         }
 
         private void Start()
@@ -186,20 +246,6 @@ namespace ThreeDISevenZeroR.XmlUI
             }
         }
 
-        public void SetMeasuredElement(UIBehaviour element)
-        {
-            this.measuredElement = element;
-        }
-
-        public void CalculateLayout()
-        {
-            if (Node.IsDirty)
-            {
-                Node.CalculateLayout();
-                OnLayoutUpdated();
-            }
-        }
-
         private void OnLayoutUpdated()
         {
             if (yogaNode.HasNewLayout)
@@ -208,10 +254,12 @@ namespace ThreeDISevenZeroR.XmlUI
                 var yPosition = yogaNode.LayoutY;
                 var width = yogaNode.LayoutWidth;
                 var height = yogaNode.LayoutHeight;
-            
-                RectTransform.anchoredPosition = new Vector2(xPosition, -yPosition);
-                RectTransform.sizeDelta = new Vector2(width, height);
-            
+                var pivot = RectTransform.pivot;
+                
+                RectTransform.anchoredPosition = new Vector2(xPosition + width * pivot.x, -yPosition - height * pivot.y);
+                RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+                RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+
                 foreach (var element in childElements)
                     element.OnLayoutUpdated();
                 
@@ -247,6 +295,9 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             if (measuredElement is Text text)
             {
+                if (string.IsNullOrWhiteSpace(text.text))
+                    return new YogaSize { width = 0, height = 0 };
+                
                 var horizontalSettings = text.GetGenerationSettings(Vector2.zero);
                 var textWidth = text.cachedTextGeneratorForLayout.GetPreferredWidth(
                     text.text, horizontalSettings) / text.pixelsPerUnit;
@@ -299,22 +350,6 @@ namespace ThreeDISevenZeroR.XmlUI
             };
         }
 
-        public void AddChild(LayoutElement child)
-        {
-            child.SetParent(this);
-            Node.AddChild(child.Node);
-            childElements.Add(child);
-        }
-
-        public void RemoveChild(LayoutElement child)
-        {
-            if (childElements.Remove(child))
-            {
-                child.SetParent(null);
-                Node.RemoveChild(child.Node);
-            }
-        }
-
         private void SetParent(LayoutElement parent)
         {
             if (parentElement)
@@ -323,31 +358,15 @@ namespace ThreeDISevenZeroR.XmlUI
             if (parent)
             {
                 if (RectTransform.parent != parent.ChildParentTransform)
-                    RectTransform.parent = parent.ChildParentTransform;
+                    RectTransform.parent.SetParent(parent.ChildParentTransform, false);
             }
             else
             {
-                RectTransform.parent = null;
+                RectTransform.SetParent(null, false);
             }
             
             parentElement = parent;
             UpdateLayoutUpdater();
-        }
-        
-        public T FindComponentById<T>(string id)
-        {
-            if (Id == id && TryGetComponent<T>(out var result))
-                return result;
-
-            for (var i = 0; i < childElements.Count; i++)
-            {
-                var foundElement = childElements[i].FindComponentById<T>(id);
-
-                if (foundElement != null)
-                    return foundElement;
-            }
-            
-            return default;
         }
 
         private void MarkYogaDirty()
@@ -360,6 +379,7 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             public LayoutElement element;
 
+            private void Start() => element.CalculateLayout();
             private void LateUpdate() => element.CalculateLayout();
         }
         

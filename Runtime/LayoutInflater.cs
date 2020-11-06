@@ -6,7 +6,6 @@ using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    [ExecuteInEditMode]
     public class LayoutInflater : MonoBehaviour
     {
         private const char AttrsDelimeter = ',';
@@ -30,12 +29,22 @@ namespace ThreeDISevenZeroR.XmlUI
 
         private readonly Dictionary<string, Dictionary<string, string>> flattenedAttributeDictionary =
             new Dictionary<string, Dictionary<string, string>>();
+        
+        private readonly Dictionary<string, Stack<LayoutElement>> pooledObjects = 
+            new Dictionary<string, Stack<LayoutElement>>();
+        
+        private readonly List<PooledLayout> pooledElementsGetComponentList = 
+            new List<PooledLayout>();
 
-        [SerializeField] private TextAsset[] attributeCollections;
+        [SerializeField] 
+        private TextAsset[] attributeCollections;
 
-        [SerializeField] private ElementCollection[] elementCollections;
+        [SerializeField] 
+        private ElementCollection[] elementCollections;
 
         private Transform prefabRootTransform;
+        private Transform poolRootTransform;
+        
         private bool isInitialized;
         
         public IXmlElementInfo[] GetRegisteredElements()
@@ -51,11 +60,48 @@ namespace ThreeDISevenZeroR.XmlUI
             foreach (var element in GetRegisteredElements())
                 RegisterElement(element);
 
+            CreatePrefabRoot();
             AddAttributeCollection(attributeCollections);
             AddElements(elementCollections);
-            CreatePrefabRoot();
 
             isInitialized = true;
+        }
+
+        public void ReturnToPool(LayoutElement element)
+        {
+            element.GetComponentsInChildren(true, pooledElementsGetComponentList);
+
+            if (pooledElementsGetComponentList.Count == 0)
+            {
+                Debug.Log($"Unable to return {element.name} to pool");
+                Destroy(element);
+                return;
+            }
+
+            for (var i = 0; i < pooledElementsGetComponentList.Count; i++)
+            {
+                var pooled = pooledElementsGetComponentList[i];
+                
+                if (!pooledObjects.TryGetValue(pooled.XmlString, out var stack))
+                {
+                    stack = new Stack<LayoutElement>();
+                    pooledObjects[pooled.XmlString] = stack;
+                }
+                
+                pooled.Element.DetachFromParent();
+                pooled.Element.transform.SetParent(poolRootTransform, false);
+                
+                stack.Push(pooled.Element);
+            }
+        }
+
+        public LayoutElement InflateChild(LayoutElement element, string xmlString,
+            IVariableProvider provider = null,
+            Dictionary<string, string> outerAttrs = null)
+        {
+            var child = Inflate(element.ChildParentTransform, xmlString, provider, outerAttrs);
+            element.Container.AddChild(child);
+            return element;
         }
 
         public LayoutElement Inflate(Transform root, string xmlString,
@@ -68,19 +114,34 @@ namespace ThreeDISevenZeroR.XmlUI
 
             if (outerAttrs == null)
             {
-                if (!createdPrefabs.TryGetValue(xmlString, out var prefab))
+                if (pooledObjects.TryGetValue(xmlString, out var list) && list != null && list.Count > 0)
                 {
-                    prefab = CreateInstance(prefabRootTransform, xmlString, outerAttrs);
-                    createdPrefabs[xmlString] = prefab;
+                    // get from pool
+                    instance = list.Pop();
+                    instance.transform.SetParent(root, false);
                 }
+                else
+                {
+                    if (!createdPrefabs.TryGetValue(xmlString, out var prefab))
+                    {
+                        // create new prefab
+                        prefab = CreateInstance(prefabRootTransform, xmlString, outerAttrs);
+                        createdPrefabs[xmlString] = prefab;
+                    }
 
-                instance = Instantiate(prefab, root, false);
+                    // clone from prefab
+                    instance = Instantiate(prefab, root, false);
+                
+                    var pooledLayout = instance.gameObject.AddComponent<PooledLayout>();
+                    pooledLayout.SetElement(instance, xmlString);
+                }
             }
             else
             {
+                // create new instance
                 instance = CreateInstance(root, xmlString, outerAttrs);
             }
-
+            
             if (instance.TryGetComponent<ComponentVariableBinder>(out var holder))
                 holder.SetVariableProvider(provider);
 
@@ -185,14 +246,19 @@ namespace ThreeDISevenZeroR.XmlUI
 
         private void CreatePrefabRoot()
         {
-            if(!Application.isPlaying)
-                return;
-            
             var prefabRoot = new GameObject("Prefabs");
+            var poolRoot = new GameObject("Pool");
+            
             prefabRoot.AddComponent<Canvas>();
             prefabRoot.SetActive(false);
             prefabRoot.transform.SetParent(transform, false);
+
+            poolRoot.AddComponent<Canvas>();
+            poolRoot.SetActive(false);
+            poolRoot.transform.SetParent(transform, false);
+            
             prefabRootTransform = prefabRoot.transform;
+            poolRootTransform = poolRoot.transform;
         }
 
         private ElementNode ParseXmlElements(string xmlString, Dictionary<string, string> outerAttrs)
@@ -355,14 +421,6 @@ namespace ThreeDISevenZeroR.XmlUI
                         default:
                             var childInstance = CreateInstance(elementRoot, container.ChildParentTransform, node, binders);
                             container.AddChild(childInstance);
-
-                            if (childInstance.TryGetComponent<RectTransform>(out var childTransform))
-                            {
-                                childTransform.sizeDelta = Vector2.zero;
-                                childTransform.anchorMin = Vector2.zero;
-                                childTransform.anchorMax = Vector2.one;
-                            }
-
                             break;
                     }
                 }
@@ -383,6 +441,24 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             public Dictionary<string, string> ownAttrs;
             public string[] parent;
+        }
+        
+        private class PooledLayout : MonoBehaviour
+        {
+            public LayoutElement Element => element;
+            public string XmlString => layoutString;
+            
+            [SerializeField]
+            private LayoutElement element;
+
+            [SerializeField]
+            private string layoutString;
+
+            public void SetElement(LayoutElement e, string xml)
+            {
+                this.element = e;
+                this.layoutString = xml;
+            }
         }
     }
 }
