@@ -7,8 +7,7 @@ namespace ThreeDISevenZeroR.XmlUI
     {
         public static BaseXmlElementInfo AddGenericProperties(this BaseXmlElementInfo element)
         {
-            return element.AddObjectHandlers(AttributeHandlers.GameObject)
-                .AddOptionalComponent<CanvasGroup>(AttributeHandlers.CanvasGroup);
+            return element.AddOptionalComponent<CanvasGroup>(AttributeHandlers.CanvasGroup);
         }
 
         public static BaseXmlElementInfo AddOptionalBackground(this BaseXmlElementInfo element)

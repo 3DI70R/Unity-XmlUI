@@ -163,20 +163,22 @@ namespace ThreeDISevenZeroR.XmlUI
                 });
             }
 
-            public LayoutElement Create(Transform parent, BoundAttributeCollection binders,
+            public LayoutElement CreateElement(Transform parent, BoundAttributeCollection binders,
                 LayoutInflater inflater, Dictionary<string, string> outerAttrs)
             {
-                var newObject = parentElement.CreateObject(parent, binders, inflater, outerAttrs);
-                
-                newObject.RectTransform.anchorMin = new Vector2(0, 1); // Top left
-                newObject.RectTransform.anchorMax = new Vector2(0, 1);
-                newObject.RectTransform.pivot = new Vector2(0.5f, 0.5f); // Center
-                newObject.gameObject.name = gameObjectName;
+                return parentElement.CreateObject(parent, binders, inflater, outerAttrs);
+            }
+
+            public void BindAttrs(LayoutElement element, 
+                BoundAttributeCollection collection)
+            {
+                element.RectTransform.anchorMin = new Vector2(0, 1); // Top left
+                element.RectTransform.anchorMax = new Vector2(0, 1);
+                element.RectTransform.pivot = new Vector2(0.5f, 0.5f); // Center
+                element.gameObject.name = gameObjectName;
 
                 for (var i = 0; i < objectBuildActions.Count; i++) 
-                    objectBuildActions[i](newObject, binders);
-
-                return newObject;
+                    objectBuildActions[i](element, collection);
             }
         }
     }

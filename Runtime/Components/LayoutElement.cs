@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Facebook.Yoga;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -82,6 +81,16 @@ namespace ThreeDISevenZeroR.XmlUI
         public float FlexShrink { get => Node.FlexShrink; set => Node.FlexShrink = value; }
         public YogaValue FlexBasis { get => Node.FlexBasis; set => Node.FlexBasis = value; }
         
+        public Visibility Visibility
+        {
+            get => visibility;
+            set
+            {
+                visibility = value;
+                UpdateVisibility();
+            }
+        }
+        
         public YogaValue Width { get => Node.Width; set => Node.Width = value; }
         public YogaValue Height { get => Node.Height; set => Node.Height = value; }
         public YogaValue MinWidth { get => Node.MinWidth; set => Node.MinWidth = value; }
@@ -120,6 +129,9 @@ namespace ThreeDISevenZeroR.XmlUI
         private YogaUpdater yogaUpdater;
         private RectTransform rectTransformRef;
 
+        private bool isHiearchyActive = true;
+        private Visibility visibility = Visibility.Visible;
+
         public string GetYogaInfo()
         {
             return Node.Print(YogaPrintOptions.Style);
@@ -148,6 +160,28 @@ namespace ThreeDISevenZeroR.XmlUI
             }
             
             return default;
+        }
+        
+        public void ActivateHierarchy()
+        {
+            gameObject.SetActive(true);
+            isHiearchyActive = true;
+        }
+
+        public void DeactivateHierarchy()
+        {
+            gameObject.SetActive(false);
+            isHiearchyActive = false;
+        }
+        
+        private void UpdateVisibility()
+        {
+            var isActive = isHiearchyActive && visibility == Visibility.Visible;
+
+            if(gameObject.activeSelf != isActive)
+                gameObject.SetActive(isActive);
+
+            Node.Display = visibility != Visibility.Gone ? YogaDisplay.Flex : YogaDisplay.None;
         }
 
         public void DetachFromParent()
@@ -218,16 +252,6 @@ namespace ThreeDISevenZeroR.XmlUI
             UpdateLayoutUpdater();
         }
 
-        private void OnEnable()
-        {
-            Node.Display = YogaDisplay.Flex;
-        }
-
-        private void OnDisable()
-        {
-            Node.Display = YogaDisplay.None;
-        }
-
         private void UpdateLayoutUpdater()
         {
             if(skipLayoutUpdater)
@@ -250,13 +274,17 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             if (yogaNode.HasNewLayout)
             {
-                var xPosition = yogaNode.LayoutX;
-                var yPosition = yogaNode.LayoutY;
                 var width = yogaNode.LayoutWidth;
                 var height = yogaNode.LayoutHeight;
-                var pivot = RectTransform.pivot;
                 
-                RectTransform.anchoredPosition = new Vector2(xPosition + width * pivot.x, -yPosition - height * pivot.y);
+                if (parentElement)
+                {
+                    var xPosition = yogaNode.LayoutX;
+                    var yPosition = yogaNode.LayoutY;
+                    var pivot = RectTransform.pivot;
+                    RectTransform.anchoredPosition = new Vector2(xPosition + width * pivot.x, -yPosition - height * pivot.y);
+                }
+
                 RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
                 RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
 
@@ -380,15 +408,29 @@ namespace ThreeDISevenZeroR.XmlUI
             public LayoutElement element;
 
             private void Start() => element.CalculateLayout();
-            private void LateUpdate() => element.CalculateLayout();
+            private void Update() => element.CalculateLayout();
         }
         
         private class YogaMeasureDirtyWatcher : UIBehaviour, ILayoutSelfController
         {
             public LayoutElement element;
-            
-            public void SetLayoutHorizontal() => element.MarkYogaDirty();
-            public void SetLayoutVertical() => element.MarkYogaDirty();
+            private float prevWidth;
+            private float prevHeight;
+
+            private void MarkDirtyIfChanged()
+            {
+                if (element.measuredElement is ILayoutElement e 
+                    && (e.preferredWidth != prevWidth || e.preferredHeight != prevHeight))
+                {
+                    prevWidth = e.preferredWidth;
+                    prevHeight = e.preferredHeight;
+                    
+                    element.MarkYogaDirty();
+                }
+            }
+
+            public void SetLayoutHorizontal() => MarkDirtyIfChanged();
+            public void SetLayoutVertical() => MarkDirtyIfChanged();
         }
     }
 }

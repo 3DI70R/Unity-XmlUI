@@ -6,10 +6,13 @@ namespace ThreeDISevenZeroR.XmlUI
     public interface IXmlElementFactory
     {
         bool SupportsChildren { get; }
-        
-        LayoutElement Create(Transform root, 
+
+        LayoutElement CreateElement(Transform root, 
             BoundAttributeCollection collection,
             LayoutInflater inflater,
             Dictionary<string, string> outerAttrs);
+        
+        void BindAttrs(LayoutElement element, 
+            BoundAttributeCollection collection);
     }
 }

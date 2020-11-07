@@ -7,7 +7,8 @@ namespace ThreeDISevenZeroR.XmlUI
     public static class AttributeHandlers
     {
         public static readonly IAttributeHandler<LayoutElement> LayoutElement = new AttributeHandler<LayoutElement>()
-            .AddStringProperty("Id", (c, v) => c.Id = v);
+            .AddStringProperty("Id", (c, v) => c.Id = v)
+            .AddEnumProperty<Visibility>("Visibility", (c, v) => c.Visibility = v);
         
         public static readonly IAttributeHandler<LayoutElement> LayoutElementYogaParams =
             new AttributeHandler<LayoutElement>()
@@ -62,9 +63,6 @@ namespace ThreeDISevenZeroR.XmlUI
                 .AddEnumProperty<YogaOverflow>("Overflow", (c, v) => c.Overflow = v);
         
         // GameObject
-        
-        public static readonly IAttributeHandler<GameObject> GameObject = new AttributeHandler<GameObject>()
-            .AddBoolProperty("IsActive", (c, v) => c.SetActive(v));
 
         public static readonly IAttributeHandler<GameObject> Position = new AttributeHandler<VectorBatch>()
             .AddVectorProperty("Position", (c, v) => c.value = v)
@@ -150,6 +148,9 @@ namespace ThreeDISevenZeroR.XmlUI
         public static readonly IAttributeHandler<Graphic> Graphic = new AttributeHandler<Graphic>()
             .AddColorProperty("Color", (d, p) => d.color = p)
             .AddResourceProperty<Material>("Material", (d, p) => d.material = p);
+        
+        public static readonly IAttributeHandler<Mask> Mask = new AttributeHandler<Mask>()
+            .AddBoolProperty("ShowMaskGraphic", (c, v) => c.showMaskGraphic = v);
         
         public static readonly IAttributeHandler<Graphic> Shadow = new AttributeHandler<EffectBatch>()
             .AddEnumProperty<ShadowType>("EffectType", (c, v) => c.type = v)

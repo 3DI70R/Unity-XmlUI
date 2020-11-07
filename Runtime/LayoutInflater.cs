@@ -88,6 +88,7 @@ namespace ThreeDISevenZeroR.XmlUI
                     pooledObjects[pooled.XmlString] = stack;
                 }
                 
+                pooled.Element.DeactivateHierarchy();
                 pooled.Element.DetachFromParent();
                 pooled.Element.transform.SetParent(poolRootTransform, false);
                 
@@ -125,7 +126,7 @@ namespace ThreeDISevenZeroR.XmlUI
                     if (!createdPrefabs.TryGetValue(xmlString, out var prefab))
                     {
                         // create new prefab
-                        prefab = CreateInstance(prefabRootTransform, xmlString, outerAttrs);
+                        prefab = CreateXmlInstance(prefabRootTransform, xmlString, outerAttrs);
                         createdPrefabs[xmlString] = prefab;
                     }
 
@@ -139,16 +140,17 @@ namespace ThreeDISevenZeroR.XmlUI
             else
             {
                 // create new instance
-                instance = CreateInstance(root, xmlString, outerAttrs);
+                instance = CreateXmlInstance(root, xmlString, outerAttrs);
             }
             
             if (instance.TryGetComponent<ComponentVariableBinder>(out var holder))
                 holder.SetVariableProvider(provider);
-
+            
+            instance.ActivateHierarchy();
             return instance;
         }
 
-        public LayoutElement CreateInstance(Transform root, string xmlString,
+        public LayoutElement CreateXmlInstance(Transform root, string xmlString,
             Dictionary<string, string> outerAttrs)
         {
             Init();
@@ -156,6 +158,8 @@ namespace ThreeDISevenZeroR.XmlUI
             var rootNode = ParseXmlElements(xmlString, outerAttrs);
             var boundAttrs = new BoundAttributeCollection();
             var newPrefab = CreateInstance(null, root, rootNode, boundAttrs);
+            
+            newPrefab.DeactivateHierarchy();
 
             if (!boundAttrs.IsEmpty)
                 newPrefab.gameObject.AddComponent<ComponentVariableBinder>()
@@ -248,12 +252,12 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             var prefabRoot = new GameObject("Prefabs");
             var poolRoot = new GameObject("Pool");
-            
-            prefabRoot.AddComponent<Canvas>();
+
+            prefabRoot.AddComponent<RectTransform>();
             prefabRoot.SetActive(false);
             prefabRoot.transform.SetParent(transform, false);
 
-            poolRoot.AddComponent<Canvas>();
+            poolRoot.AddComponent<RectTransform>();
             poolRoot.SetActive(false);
             poolRoot.transform.SetParent(transform, false);
             
@@ -397,10 +401,10 @@ namespace ThreeDISevenZeroR.XmlUI
             return type.CreateFactory(attrs);
         }
 
-        private LayoutElement CreateInstance(LayoutElement elementRoot, Transform root, ElementNode element,
-            BoundAttributeCollection binders)
+        private LayoutElement CreateInstance(LayoutElement elementRoot, Transform root, 
+            ElementNode element, BoundAttributeCollection binders)
         {
-            var instance = element.factory.Create(root, binders, this, element.ownAttrs);
+            var instance = element.factory.CreateElement(root, binders, this, element.ownAttrs);
             var container = instance.Container;
 
             if (!elementRoot)
@@ -425,7 +429,8 @@ namespace ThreeDISevenZeroR.XmlUI
                     }
                 }
             }
-
+            
+            element.factory.BindAttrs(instance, binders);
             return instance;
         }
 

@@ -20,7 +20,7 @@ namespace ThreeDISevenZeroR.XmlUI
 
             AddElement(new PrimitiveXmlElementInfo("Text")
                 .AddGenericProperties()
-                .AddComponent<Text>((g, c) => g.font = font,
+                .AddComponent<Text>((c, g) => c.font = font,
                     AttributeHandlers.Text,
                     AttributeHandlers.Shadow,
                     AttributeHandlers.Graphic)
@@ -32,6 +32,11 @@ namespace ThreeDISevenZeroR.XmlUI
                     AttributeHandlers.Image,
                     AttributeHandlers.Shadow,
                     AttributeHandlers.Graphic));
+
+            AddElement(new PrimitiveXmlElementInfo("Mask")
+                .AddGenericProperties()
+                .AddComponent<Image>(AttributeHandlers.Image, AttributeHandlers.Graphic)
+                .AddComponent<Mask>(AttributeHandlers.Mask));
         }
     }
 }
