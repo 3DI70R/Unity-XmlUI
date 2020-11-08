@@ -20,6 +20,9 @@ namespace ThreeDISevenZeroR.XmlUI
 
         private readonly Dictionary<string, IXmlElementInfo> elementTypes =
             new Dictionary<string, IXmlElementInfo>();
+        
+        private readonly Dictionary<string, IXmlComponentInfo> componentTypes = 
+            new Dictionary<string, IXmlComponentInfo>();
 
         private readonly Dictionary<string, LayoutElement> createdPrefabs =
             new Dictionary<string, LayoutElement>();
@@ -52,13 +55,24 @@ namespace ThreeDISevenZeroR.XmlUI
             return elementCollections.SelectMany(e => e.Elements).ToArray();
         }
 
+        public IXmlComponentInfo[] GetRegisteredComponents()
+        {
+            return elementCollections.SelectMany(e => e.Components).ToArray();
+        }
+
         public void Init()
         {
             if (isInitialized)
                 return;
 
-            foreach (var element in GetRegisteredElements())
-                RegisterElement(element);
+            foreach (var collection in elementCollections)
+            {
+                foreach (var element in collection.Elements)
+                    RegisterElement(element);
+
+                foreach (var component in collection.Components)
+                    RegisterComponent(component);
+            }
 
             CreatePrefabRoot();
             AddAttributeCollection(attributeCollections);
@@ -248,6 +262,11 @@ namespace ThreeDISevenZeroR.XmlUI
             elementTypes[info.Name] = info;
         }
 
+        private void RegisterComponent(IXmlComponentInfo info)
+        {
+            componentTypes[info.Name] = info;
+        }
+
         private void CreatePrefabRoot()
         {
             var prefabRoot = new GameObject("Prefabs");
@@ -277,9 +296,15 @@ namespace ThreeDISevenZeroR.XmlUI
 
                 result.type = element.Name;
                 result.ownAttrs = attrs;
+                result.childNodes = new List<ElementNode>();
+
+                if (element.Name == AttrsChildRootName)
+                    return result;
                 
-                if(element.Name != AttrsChildRootName)
-                    result.factory = CreateFactory(element.Name, attrs);
+                var components = new List<IXmlComponentFactory>();
+                var componentPrefix = element.Name + ".";
+                
+                result.factory = CreateElementFactory(element.Name, attrs);
 
                 for (var i = 0; i < element.ChildNodes.Count; i++)
                 {
@@ -287,13 +312,23 @@ namespace ThreeDISevenZeroR.XmlUI
 
                     if (xmlChild.NodeType == XmlNodeType.Element)
                     {
-                        if (result.childNodes == null)
-                            result.childNodes = new List<ElementNode>();
-
-                        result.childNodes.Add(ParseNode((XmlElement) xmlChild));
+                        // Component
+                        if (xmlChild.Name.StartsWith(componentPrefix))
+                        {
+                            var componentAttrs = CollectElementAttributes((XmlElement) xmlChild, outerAttrs);
+                            var factory = CreateComponentFactory(xmlChild.Name.Substring(componentPrefix.Length), 
+                                componentAttrs);
+                            
+                            components.Add(factory);
+                        }
+                        else // Element
+                        {
+                            result.childNodes.Add(ParseNode((XmlElement) xmlChild));
+                        }
                     }
                 }
 
+                result.components = components.ToArray();
                 return result;
             }
 
@@ -308,7 +343,8 @@ namespace ThreeDISevenZeroR.XmlUI
             for (var i = 0; i < element.Attributes.Count; i++)
             {
                 var attr = element.Attributes[i];
-                var value = outerAttrs != null ? ResolveAttrValue(attr.Value, outerAttrs) : attr.Value;
+                var value = outerAttrs != null ? ResolveAttrValue(
+                    attr.Value, outerAttrs) : attr.Value;
 
                 if (value != null)
                     result[attr.Name] = value;
@@ -392,11 +428,19 @@ namespace ThreeDISevenZeroR.XmlUI
             return result;
         }
 
-        private IXmlElementFactory CreateFactory(string element,
+        private IXmlElementFactory CreateElementFactory(string element,
             Dictionary<string, string> attrs)
         {
             if (!elementTypes.TryGetValue(element, out var type))
                 throw new ArgumentException($"Unknown element type: {element}");
+
+            return type.CreateFactory(attrs);
+        }
+
+        private IXmlComponentFactory CreateComponentFactory(string component, Dictionary<string, string> attrs)
+        {
+            if (!componentTypes.TryGetValue(component, out var type))
+                throw new ArgumentException($"Unknown element type: {component}");
 
             return type.CreateFactory(attrs);
         }
@@ -410,27 +454,28 @@ namespace ThreeDISevenZeroR.XmlUI
             if (!elementRoot)
                 elementRoot = instance;
 
-            if (element.childNodes != null)
+            for (var i = 0; i < element.childNodes.Count; i++)
             {
-                for (var i = 0; i < element.childNodes.Count; i++)
+                var node = element.childNodes[i];
+
+                switch (node.type)
                 {
-                    var node = element.childNodes[i];
+                    case AttrsChildRootName:
+                        elementRoot.Container = instance;
+                        break;
 
-                    switch (node.type)
-                    {
-                        case AttrsChildRootName:
-                            elementRoot.Container = instance;
-                            break;
-
-                        default:
-                            var childInstance = CreateInstance(elementRoot, container.ChildParentTransform, node, binders);
-                            container.AddChild(childInstance);
-                            break;
-                    }
+                    default:
+                        var childInstance = CreateInstance(elementRoot, container.ChildParentTransform, node, binders);
+                        container.AddChild(childInstance);
+                        break;
                 }
             }
             
             element.factory.BindAttrs(instance, binders);
+
+            foreach (var c in element.components)
+                c.BindAttrs(instance, binders);
+
             return instance;
         }
 
@@ -439,6 +484,7 @@ namespace ThreeDISevenZeroR.XmlUI
             public string type;
             public Dictionary<string, string> ownAttrs;
             public IXmlElementFactory factory;
+            public IXmlComponentFactory[] components;
             public List<ElementNode> childNodes;
         }
 

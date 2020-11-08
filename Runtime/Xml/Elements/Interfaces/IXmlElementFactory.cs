@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    public interface IXmlElementFactory
+    public interface IXmlElementFactory : IXmlComponentFactory
     {
         bool SupportsChildren { get; }
 
@@ -11,8 +11,5 @@ namespace ThreeDISevenZeroR.XmlUI
             BoundAttributeCollection collection,
             LayoutInflater inflater,
             Dictionary<string, string> outerAttrs);
-        
-        void BindAttrs(LayoutElement element, 
-            BoundAttributeCollection collection);
     }
 }

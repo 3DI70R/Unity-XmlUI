@@ -19,9 +19,12 @@ namespace ThreeDISevenZeroR.XmlUI
             var inflater = (LayoutInflater) target;
 
             EditorGUILayout.Space(32);
-            if (GUILayout.Button("Generate .XSD schema (For IDE autocompletion)"))
+            if (GUILayout.Button("Generate .XSD schema\n(For IDE autocompletion)"))
             {
-                var schemaString = GenerateXmlSchema(inflater.GetRegisteredElements());
+                var schemaString = GenerateXmlSchema(
+                    inflater.GetRegisteredElements(), 
+                    inflater.GetRegisteredComponents());
+                
                 var selectedPath = EditorUtility.OpenFilePanel("Save .xsd file", null, "xsd");
 
                 if (selectedPath != null)
@@ -29,54 +32,70 @@ namespace ThreeDISevenZeroR.XmlUI
             }
         }
 
-        private string GenerateXmlSchema(IXmlElementInfo[] infos)
+        private string GenerateXmlSchema(IXmlElementInfo[] elements, IXmlComponentInfo[] components)
         {
-            var types = GetXmlTypes(infos);
-            var attributes = GetAttributeHandlers(infos);
+            var allAttrs = elements
+                .SelectMany(e => e.Attributes)
+                .Concat(components.SelectMany(e => e.Attributes))
+                .ToList();
+            
+            var types = GetXmlTypes(allAttrs);
+            var attributes = GetAttributeHandlers(allAttrs);
             
             var root = new XElement(SchemaNamespace + "schema", 
                 new XAttribute(XNamespace.Xmlns + XS, SchemaNamespace));
 
+            // Attribute types
             foreach (var type in types)
-            {
                 root.Add(GetSchemaTypeElement(type));
-            }
 
+            // Attributes
             foreach (var attr in attributes)
-            {
                 root.Add(GetSchemaAttributeElement(attr));
-            }
-            
-            root.Add(new XElement(SchemaNamespace + "element", 
-                new XAttribute("name", LayoutInflater.AttrsChildRootName)));
-            
-            root.Add(CreateElementGroup(LayoutElementsGroup, infos.Select(i => i.Name)
+
+            // Default group
+            root.Add(CreateElementGroup(LayoutElementsGroup, elements.Select(i => i.Name)
                 .Append(LayoutInflater.AttrsChildRootName)
                 .ToList()));
 
-            foreach (var xmlElement in infos)
+            // Base components
+            foreach (var component in components)
             {
-                root.Add(CreateSchemaElementElement(xmlElement, LayoutElementsGroup));
+                root.Add(CreateSchemaComponentElement(component));
+            }
+
+            // Elements
+            foreach (var element in elements)
+            {
+                // Element.Component
+                foreach (var component in components)
+                    root.Add(CreateSchemaComponentSubstitutionElement(element, component));
+
+                root.Add(CreateSchemaElementElement(element, components, LayoutElementsGroup));
             }
 
             root.Add(CreateSchemaAttrsCollectionElement());
             root.Add(CreateSchemaAttrsElement(attributes));
             
+            // ChildRoot element
+            root.Add(new XElement(SchemaNamespace + "element", 
+                new XAttribute("name", LayoutInflater.AttrsChildRootName)));
+            
             return ConvertToString(root);
         }
 
-        private List<XmlTypeSchema> GetXmlTypes(IXmlElementInfo[] elements)
+        private List<XmlTypeSchema> GetXmlTypes(IEnumerable<IAttributeInfo> attrs)
         {
-            return elements.SelectMany(s => s.Attributes)
+            return attrs
                 .Select(a => a.SchemaInfo)
                 .GroupBy(i => i.typeName)
                 .Select(g => g.First())
                 .ToList();
         }
 
-        private List<IAttributeInfo> GetAttributeHandlers(IXmlElementInfo[] elements)
+        private List<IAttributeInfo> GetAttributeHandlers(IEnumerable<IAttributeInfo> attrs)
         {
-            return elements.SelectMany(e => e.Attributes)
+            return attrs
                 .GroupBy(a => a.Name)
                 .Select(g => g.First())
                 .ToList();
@@ -88,6 +107,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 new XAttribute("name", groupName));
             
             var sequence = new XElement(SchemaNamespace + "choice");
+            
             element.Add(sequence);
 
             foreach (var elementName in elementNames)
@@ -110,37 +130,73 @@ namespace ThreeDISevenZeroR.XmlUI
             return xmlElement;
         }
 
-        private XElement CreateSchemaElementElement(IXmlElementInfo element, string group)
+        private XElement CreateSchemaElementElement(IXmlElementInfo element, 
+            IXmlComponentInfo[] components, string group)
         {
             var xmlElement = CreateSchemaElement(element.Name, out var complexType);
-
-            if (element.SupportsChildren)
+            var chooseGroup = new XElement(SchemaNamespace + "choice", 
+                new XAttribute("minOccurs", "0"), 
+                new XAttribute("maxOccurs", "unbounded"));
+            complexType.Add(chooseGroup);
+            
+            foreach (var component in components)
             {
-                complexType.Add(new XElement(SchemaNamespace + "sequence", 
-                    new XElement(SchemaNamespace + "group",
-                        new XAttribute("ref", group),
-                        new XAttribute("minOccurs", "0"),
-                        new XAttribute("maxOccurs", "unbounded"))));
+                var name = GetComponentName(element, component);
+                chooseGroup.Add(new XElement(SchemaNamespace + "element", 
+                    new XAttribute("ref", name)));
             }
             
+            if (element.SupportsChildren)
+            {
+                chooseGroup.Add(new XElement(SchemaNamespace + "group",
+                    new XAttribute("ref", group),
+                    new XAttribute("minOccurs", "0"),
+                    new XAttribute("maxOccurs", "unbounded")));
+            }
+            
+            AddAttributeReferences(complexType, element.Attributes);
+            
+            return xmlElement;
+        }
+
+        private XElement CreateSchemaComponentElement(IXmlComponentInfo element)
+        {
+            var xmlElement = CreateSchemaElement(element.Name, out var complexType);
+            AddAttributeReferences(complexType, element.Attributes);
+
+            return xmlElement;
+        }
+
+        private string GetComponentName(IXmlElementInfo element, IXmlComponentInfo component)
+        {
+            return element.Name + "." + component.Name;
+        }
+
+        private XElement CreateSchemaComponentSubstitutionElement(IXmlElementInfo element, IXmlComponentInfo component)
+        {
+            return new XElement(SchemaNamespace + "element", 
+                new XAttribute("name", GetComponentName(element, component)),
+                new XAttribute("substitutionGroup", component.Name));
+        }
+
+        private void AddAttributeReferences(XElement complexType, IAttributeInfo[] attributes)
+        {
             complexType.Add(new XElement(SchemaNamespace + "attribute", 
                 new XAttribute("name", "Attrs"),
                 new XAttribute("type", XS + ":" + "string")));
 
-            foreach (var attr in element.Attributes)
+            foreach (var attr in attributes)
             {
                 complexType.Add(new XElement(SchemaNamespace + "attribute", 
                     new XAttribute("ref", attr.Name)));
             }
-
-            return xmlElement;
         }
         
         private XElement CreateSchemaAttrsCollectionElement()
         {
             var xmlElement = CreateSchemaElement(LayoutInflater.AttrsCollectionElementName, out var complexType);
             
-            complexType.Add(new XElement(SchemaNamespace + "sequence", 
+            complexType.Add(new XElement(SchemaNamespace + "choice", 
                 new XElement(SchemaNamespace + "element",
                     new XAttribute("ref", LayoutInflater.AttrsCollectionEntryName),
                     new XAttribute("minOccurs", "0"),
@@ -148,15 +204,14 @@ namespace ThreeDISevenZeroR.XmlUI
 
             return xmlElement;
         }
-
+        
         private XElement CreateSchemaAttrsElement(List<IAttributeInfo> allAttrs)
         {
             var xmlElement = CreateSchemaElement(LayoutInflater.AttrsCollectionEntryName, out var complexType);
 
             foreach (var attr in allAttrs)
             {
-                complexType.Add(new XElement(SchemaNamespace + "attribute", 
-                    new XAttribute("ref", attr.Name)));
+                complexType.Add(GetSchemaAttributeRefElement(attr));
             }
             
             complexType.Add(new XElement(SchemaNamespace + "attribute", 
@@ -175,6 +230,12 @@ namespace ThreeDISevenZeroR.XmlUI
             return new XElement(SchemaNamespace + "attribute", 
                 new XAttribute("name", attr.Name),
                 new XAttribute("type", attr.SchemaInfo.typeName));
+        }
+
+        private XElement GetSchemaAttributeRefElement(IAttributeInfo attr)
+        {
+            return new XElement(SchemaNamespace + "attribute", 
+                new XAttribute("ref", attr.Name));
         }
 
         private XElement GetAutocompleteRestrictionElement(string baseType, string[] entries)
