@@ -129,8 +129,6 @@ namespace ThreeDISevenZeroR.XmlUI
         private YogaUpdater yogaUpdater;
         private RectTransform rectTransformRef;
 
-        private IChildElementAnimator childAnimator;
-
         private bool isHiearchyActive = true;
         private bool isGraphicCallbackRegistered;
         private Visibility visibility = Visibility.Visible;
@@ -204,7 +202,7 @@ namespace ThreeDISevenZeroR.XmlUI
             if (Node.IsDirty)
             {
                 Node.CalculateLayout();
-                UpdateLayout(childAnimator);
+                OnLayoutUpdated();
             }
         }
 
@@ -323,11 +321,11 @@ namespace ThreeDISevenZeroR.XmlUI
             }
         }
         
-        private void UpdateLayout(IChildElementAnimator animator)
+        private void OnLayoutUpdated()
         {
             if (yogaNode.HasNewLayout)
             {
-                /*var width = yogaNode.LayoutWidth;
+                var width = yogaNode.LayoutWidth;
                 var height = yogaNode.LayoutHeight;
                 
                 if (parentElement)
@@ -342,9 +340,9 @@ namespace ThreeDISevenZeroR.XmlUI
                 RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
 
                 foreach (var element in childElements)
-                    element.OnLayoutUpdated(childAnimator);
+                    element.OnLayoutUpdated();
                 
-                yogaNode.MarkLayoutSeen();*/
+                yogaNode.MarkLayoutSeen();
             }
         }
 
