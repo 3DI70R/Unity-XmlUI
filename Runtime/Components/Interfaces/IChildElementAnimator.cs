@@ -1,22 +1,15 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
     public interface IChildElementAnimator
     {
-        void AnimateAddition(LayoutElement element, RectTransform transform, CanvasGroup group, 
-            Rect target, Action onComplete = null);
-        
-        void AnimateMove(LayoutElement element, RectTransform transform, CanvasGroup group, 
-            Rect target, Action onComplete = null);
-        
-        void AnimateResize(LayoutElement element, RectTransform transform, CanvasGroup group, 
-            Rect target, Action onComplete = null);
-        
-        void AnimateDeletion(LayoutElement element, RectTransform transform, CanvasGroup group,
-            Rect target, Action onComplete = null);
+        void AnimateChildAppear(LayoutElement element, CanvasGroup group, Rect target);
+        void AnimateChildMove(LayoutElement element, Vector2 position);
+        void AnimateChildDisappear(LayoutElement element, CanvasGroup group);
+        void AnimateContainerResize(LayoutElement element, Vector2 size);
 
-        void FinishAnimation(LayoutElement element);
+        void StartAnimation();
+        void FinishAnimation();
     }
 }

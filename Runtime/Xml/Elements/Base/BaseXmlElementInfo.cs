@@ -59,7 +59,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 var element = parentElement.CreateObject(parent, binders, inflater, outerAttrs);
                 element.RectTransform.anchorMin = new Vector2(0, 1); // Top left
                 element.RectTransform.anchorMax = new Vector2(0, 1);
-                element.RectTransform.pivot = new Vector2(0.5f, 0.5f); // Center
+                element.RectTransform.pivot = new Vector2(0,1f); // Center
                 element.gameObject.name = gameObjectName;
 
                 return element;

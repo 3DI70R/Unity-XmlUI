@@ -40,6 +40,8 @@ namespace ThreeDISevenZeroR.XmlUI
                 UpdateLayoutUpdater();
             }
         }
+
+        public IReadOnlyList<LayoutElement> Children => childElements;
         
         public YogaValue OffsetLeft { get => Node.Left; set => Node.Left = value; }
         public YogaValue OffsetTop { get => Node.Top; set => Node.Top = value; }
@@ -123,13 +125,22 @@ namespace ThreeDISevenZeroR.XmlUI
         [HideInInspector]
         private YogaMeasureDirtyWatcher measuredElementDirtyMarker;
 
+        private List<LayoutElement> removedElements = 
+            new List<LayoutElement>();
+
+        private HashSet<LayoutElement> addedElements 
+            = new HashSet<LayoutElement>();
+
         private bool autoUpdateLayout = true;
         private bool skipLayoutUpdater = true;
         private YogaNode yogaNode;
         private YogaUpdater yogaUpdater;
         private RectTransform rectTransformRef;
+        private IChildElementAnimator childAnimator;
 
         private bool isHiearchyActive = true;
+        private bool isAnimationActive;
+        
         private bool isGraphicCallbackRegistered;
         private Visibility visibility = Visibility.Visible;
         
@@ -148,6 +159,12 @@ namespace ThreeDISevenZeroR.XmlUI
                 rectTransformRef = (RectTransform) transform;
                 return rectTransformRef;
             }
+        }
+
+        public void SetChildAnimator(IChildElementAnimator animator)
+        {
+            childAnimator = animator;
+            isAnimationActive = childAnimator != null;
         }
 
         public T FindComponentById<T>(string id)
@@ -276,6 +293,12 @@ namespace ThreeDISevenZeroR.XmlUI
             child.SetParent(this);
             Node.Insert(index, child.Node);
             childElements.Insert(index, child);
+
+            if (isAnimationActive)
+            {
+                child.DeactivateHierarchy();
+                addedElements.Add(child);
+            }
         }
 
         public void AddChild(LayoutElement child)
@@ -286,14 +309,28 @@ namespace ThreeDISevenZeroR.XmlUI
             child.SetParent(this);
             Node.AddChild(child.Node);
             childElements.Add(child);
+
+            if (isAnimationActive)
+            {
+                child.DeactivateHierarchy();
+                addedElements.Add(child);
+            }
         }
 
         public void RemoveChild(LayoutElement child)
         {
             if (childElements.Remove(child))
             {
-                child.SetParent(null);
                 Node.RemoveChild(child.Node);
+
+                if (isAnimationActive)
+                {
+                    removedElements.Add(child);
+                }
+                else
+                {
+                    child.SetParent(null);
+                }
             }
         }
 
@@ -323,27 +360,95 @@ namespace ThreeDISevenZeroR.XmlUI
         
         private void OnLayoutUpdated()
         {
-            if (yogaNode.HasNewLayout)
+            if(!Node.HasNewLayout)
+                return;
+            
+            if (isAnimationActive)
             {
-                var width = yogaNode.LayoutWidth;
-                var height = yogaNode.LayoutHeight;
+                ApplyLayoutWithAnimation();
+            }
+            else
+            {
+                ApplyLayoutWithoutAnimation();
+            }
                 
-                if (parentElement)
+            Node.MarkLayoutSeen();
+        }
+
+        private void ApplyLayoutWithoutAnimation()
+        {
+            if (addedElements.Count > 0)
+            {
+                foreach (var addedElement in addedElements)
+                    addedElement.ActivateHierarchy();
+                
+                addedElements.Clear();
+            }
+
+            if (removedElements.Count > 0)
+            {
+                foreach (var element in removedElements)
+                    element.SetParent(null);
+                
+                removedElements.Clear();
+            }
+            
+            foreach (var element in childElements)
+            {
+                element.RectTransform.anchoredPosition = GetElementPosition(element);;
+                element.OnLayoutUpdated();
+            }
+            
+            RectTransform.sizeDelta = new Vector2(Node.LayoutWidth, Node.LayoutHeight);
+        }
+
+        private void ApplyLayoutWithAnimation()
+        {
+            childAnimator.FinishAnimation();
+
+            if (removedElements.Count > 0)
+            {
+                foreach (var removedElement in removedElements)
+                    childAnimator.AnimateChildDisappear(removedElement, null);
+
+                removedElements.Clear();
+            }
+            
+            var newSize = new Vector2(Node.LayoutWidth, Node.LayoutHeight);
+            
+            if (RectTransform.sizeDelta != newSize)
+            {
+                childAnimator.AnimateContainerResize(this, newSize);
+            }
+
+            foreach (var element in childElements)
+            {
+                var position = GetElementPosition(element);
+                
+                if (addedElements.Contains(element))
                 {
-                    var xPosition = yogaNode.LayoutX;
-                    var yPosition = yogaNode.LayoutY;
-                    var pivot = RectTransform.pivot;
-                    RectTransform.anchoredPosition = new Vector2(xPosition + width * pivot.x, -yPosition - height * pivot.y);
+                    var rect = new Rect(position.x, position.y, 
+                        element.Node.LayoutWidth, element.Node.LayoutHeight);
+                    
+                    childAnimator.AnimateChildAppear(element, null, rect);
+                }
+                else
+                {
+                    if (element.RectTransform.anchoredPosition != position)
+                        childAnimator.AnimateChildMove(element, position);
                 }
 
-                RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
-                RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
-
-                foreach (var element in childElements)
-                    element.OnLayoutUpdated();
-                
-                yogaNode.MarkLayoutSeen();
+                element.OnLayoutUpdated();
             }
+
+            addedElements.Clear();
+            childAnimator.StartAnimation();
+        }
+
+        private Vector2 GetElementPosition(LayoutElement element)
+        {
+            var pivot = element.RectTransform.pivot;
+            return new Vector2(element.Node.LayoutX, -element.Node.LayoutY);
         }
 
         private void InitYogaNode()
