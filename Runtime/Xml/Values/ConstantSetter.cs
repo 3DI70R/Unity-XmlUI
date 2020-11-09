@@ -6,18 +6,16 @@ namespace ThreeDISevenZeroR.XmlUI
     {
         public string[] AttributeNames { get; }
         public bool IsSerializable { get; set; }
-        public Action<T> SetterDelegate => setter;
+        public Action<LayoutElement, T> Setter { get; private set; }
 
-        private Action<T> setter;
-
-        public ConstantSetter(string[] attributeNames, Action<T> setter, bool isInstanceConstant)
+        public ConstantSetter(string[] attributeNames, Action<LayoutElement, T> setter, bool isInstanceConstant)
         {
-            this.setter = setter;
+            this.Setter = setter;
             
             AttributeNames = attributeNames;
             IsSerializable = isInstanceConstant;
         }
 
-        public void Apply(T instance) => setter(instance);
+        public void Apply(LayoutElement element, T instance) => Setter(element, instance);
     }
 }

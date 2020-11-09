@@ -105,9 +105,10 @@ namespace ThreeDISevenZeroR.XmlUI
                 objectBuildActions.Add((prefabObject, binder) =>
                 {
                     foreach (var c in attrs.SerializableConstants)
-                        c.Apply(prefabObject.gameObject);
+                        c.Setter(prefabObject, prefabObject.gameObject);
 
-                    binder.AddAttributes(prefabObject.gameObject, attrs.Variables, attrs.NonSerializableConstants);
+                    binder.AddAttributes(prefabObject, prefabObject.gameObject, 
+                        attrs.Variables, attrs.NonSerializableConstants);
                 });
             }
             
@@ -124,9 +125,10 @@ namespace ThreeDISevenZeroR.XmlUI
                         return;
                     
                     foreach (var c in attrs.SerializableConstants) 
-                        c.Apply(component);
+                        c.Setter(prefabObject, component);
 
-                    binder.AddAttributes(component, attrs.Variables, attrs.NonSerializableConstants);
+                    binder.AddAttributes(prefabObject, component, 
+                        attrs.Variables, attrs.NonSerializableConstants);
                 });
             }
 

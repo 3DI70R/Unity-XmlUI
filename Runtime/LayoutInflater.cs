@@ -30,11 +30,11 @@ namespace ThreeDISevenZeroR.XmlUI
         private readonly Dictionary<string, Dictionary<string, string>> flattenedAttributeDictionary =
             new Dictionary<string, Dictionary<string, string>>();
         
-        private readonly Dictionary<CacheKey, LayoutElement> createdPrefabs =
-            new Dictionary<CacheKey, LayoutElement>();
+        private readonly Dictionary<string, LayoutElement> createdPrefabs =
+            new Dictionary<string, LayoutElement>();
         
-        private readonly Dictionary<CacheKey, Stack<LayoutElement>> pooledObjects = 
-            new Dictionary<CacheKey, Stack<LayoutElement>>();
+        private readonly Dictionary<string, Stack<LayoutElement>> pooledObjects = 
+            new Dictionary<string, Stack<LayoutElement>>();
         
         private readonly List<PooledLayout> pooledElementsGetComponentList = 
             new List<PooledLayout>();
@@ -80,7 +80,7 @@ namespace ThreeDISevenZeroR.XmlUI
             isInitialized = true;
         }
 
-        public void ReturnToPool(LayoutElement element)
+        public void ReturnToPool(Component element)
         {
             element.GetComponentsInChildren(true, pooledElementsGetComponentList);
 
@@ -95,10 +95,10 @@ namespace ThreeDISevenZeroR.XmlUI
             {
                 var pooled = pooledElementsGetComponentList[i];
 
-                if (!pooledObjects.TryGetValue(pooled.CacheKey, out var stack))
+                if (!pooledObjects.TryGetValue(pooled.Layout, out var stack))
                 {
                     stack = new Stack<LayoutElement>();
-                    pooledObjects[pooled.CacheKey] = stack;
+                    pooledObjects[pooled.Layout] = stack;
                 }
                 
                 pooled.Element.DeactivateHierarchy();
@@ -112,29 +112,29 @@ namespace ThreeDISevenZeroR.XmlUI
                 pooledElementsGetComponentList[i].Element.OnReturnedToPool();
         }
         
-        public T InflateChild<T>(LayoutElement parent, string xmlString, IVariableProvider provider = null)
-            where T : LayoutElement => (T) InflateChild(typeof(T), parent, xmlString, provider);
+        public Layout<T> InflateChild<T>(LayoutElement parent, string layoutXml, IVariableProvider provider = null)
+            where T : Component
+        {
+            var element = InflateChild(parent, layoutXml, provider);
+            return new Layout<T>(element, element.GetComponent<T>());
+        }
 
-        public LayoutElement InflateChild(LayoutElement parent, string xmlString, IVariableProvider provider = null) => 
-            InflateChild(typeof(LayoutElement), parent, xmlString, provider);
-
-        public LayoutElement InflateChild(Type elementType, LayoutElement parent, string xmlString,
+        public LayoutElement InflateChild(LayoutElement parent, string xmlString,
             IVariableProvider provider = null)
         {
-            var child = Inflate(elementType, parent.ChildParentTransform, xmlString, provider);
+            var child = Inflate(parent.ChildParentTransform, xmlString, provider);
             parent.Container.AddChild(child);
             return child;
         }
         
-        public T Inflate<T>(Transform root, string xmlString, 
-            IVariableProvider provider = null, Dictionary<string, string> outerAttrs = null) 
-            where T : LayoutElement => (T) Inflate(typeof(T), root, xmlString, provider, outerAttrs);
+        public Layout<T> Inflate<T>(Transform root, string layoutXml, IVariableProvider provider = null, Dictionary<string, string> outerAttrs = null) 
+            where T : Component
+        {
+            var element = Inflate(root, layoutXml, provider, outerAttrs);
+            return new Layout<T>(element, element.GetComponent<T>());
+        }
 
-        public LayoutElement Inflate(Transform root, string xmlString,
-            IVariableProvider provider = null, Dictionary<string, string> outerAttrs = null) =>
-            Inflate(typeof(LayoutElement), root, xmlString, provider, outerAttrs);
-
-        public LayoutElement Inflate(Type elementType, Transform root, string xmlString,
+        public LayoutElement Inflate(Transform root, string layoutXml,
             IVariableProvider provider = null, Dictionary<string, string> outerAttrs = null)
         {
             Init();
@@ -143,9 +143,7 @@ namespace ThreeDISevenZeroR.XmlUI
 
             if (outerAttrs == null)
             {
-                var key = new CacheKey(xmlString, elementType);
-                
-                if (pooledObjects.TryGetValue(key, out var list) && list != null && list.Count > 0)
+                if (pooledObjects.TryGetValue(layoutXml, out var list) && list != null && list.Count > 0)
                 {
                     // get from pool
                     instance = list.Pop();
@@ -154,24 +152,24 @@ namespace ThreeDISevenZeroR.XmlUI
                 }
                 else
                 {
-                    if (!createdPrefabs.TryGetValue(key, out var prefab))
+                    if (!createdPrefabs.TryGetValue(layoutXml, out var prefab))
                     {
                         // create new prefab
-                        prefab = CreateXmlInstance(elementType, prefabRootTransform, xmlString, outerAttrs);
-                        createdPrefabs[key] = prefab;
+                        prefab = CreateXmlInstance(prefabRootTransform, layoutXml, outerAttrs);
+                        createdPrefabs[layoutXml] = prefab;
                     }
 
                     // clone from prefab
                     instance = Instantiate(prefab, root, false);
                 
                     var pooledLayout = instance.gameObject.AddComponent<PooledLayout>();
-                    pooledLayout.SetElement(instance, key);
+                    pooledLayout.SetElement(instance, layoutXml);
                 }
             }
             else
             {
                 // create new instance
-                instance = CreateXmlInstance(elementType, root, xmlString, outerAttrs);
+                instance = CreateXmlInstance(root, layoutXml, outerAttrs);
             }
             
             if (instance.TryGetComponent<ComponentVariableBinder>(out var holder))
@@ -181,14 +179,14 @@ namespace ThreeDISevenZeroR.XmlUI
             return instance;
         }
 
-        public LayoutElement CreateXmlInstance(Type elementType, Transform root, string xmlString,
+        public LayoutElement CreateXmlInstance(Transform root, string xmlString,
             Dictionary<string, string> outerAttrs)
         {
             Init();
 
             var rootNode = ParseXmlElements(xmlString, outerAttrs);
             var boundAttrs = new BoundAttributeCollection();
-            var newPrefab = CreateInstance(elementType, null, root, rootNode, boundAttrs);
+            var newPrefab = CreateInstance(null, root, rootNode, boundAttrs);
             
             newPrefab.DeactivateHierarchy();
 
@@ -453,10 +451,10 @@ namespace ThreeDISevenZeroR.XmlUI
             return type.CreateFactory(attrs);
         }
 
-        private LayoutElement CreateInstance(Type elementType, LayoutElement elementRoot, Transform root, 
+        private LayoutElement CreateInstance(LayoutElement elementRoot, Transform root, 
             ElementNode element, BoundAttributeCollection binders)
         {
-            var instance = element.factory.CreateElement(elementType, root, binders, this, element.ownAttrs);
+            var instance = element.factory.CreateElement(root, binders, this, element.ownAttrs);
             var container = instance.Container;
 
             if (!elementRoot)
@@ -473,8 +471,7 @@ namespace ThreeDISevenZeroR.XmlUI
                         break;
 
                     default:
-                        var childInstance = CreateInstance(typeof(LayoutElement), elementRoot,
-                            container.ChildParentTransform, node, binders);
+                        var childInstance = CreateInstance(elementRoot, container.ChildParentTransform, node, binders);
                         container.AddChild(childInstance);
                         break;
                 }
@@ -487,31 +484,6 @@ namespace ThreeDISevenZeroR.XmlUI
             
             instance.OnCreatedFromXml();
             return instance;
-        }
-
-        private class CacheKey
-        {
-            public readonly string xmlLayout;
-            public readonly Type componentType;
-
-            public CacheKey(string xmlLayout, Type componentType)
-            {
-                this.xmlLayout = xmlLayout;
-                this.componentType = componentType;
-            }
-
-            public override int GetHashCode() => xmlLayout.GetHashCode() + componentType.GetHashCode();
-            
-            public override bool Equals(object obj)
-            {
-                if (obj == this)
-                    return true;
-                
-                if (obj is CacheKey key)
-                    return key.xmlLayout == xmlLayout && key.componentType == componentType;
-
-                return false;
-            }
         }
 
         private class ElementNode
@@ -532,26 +504,16 @@ namespace ThreeDISevenZeroR.XmlUI
         private class PooledLayout : MonoBehaviour
         {
             public LayoutElement Element => element;
-            public CacheKey CacheKey => holder.key;
+            public string Layout => layout;
             
-            [SerializeField]
             private LayoutElement element;
+            private string layout;
 
-            [SerializeField]
-            private KeyHolder holder;
-
-            public void SetElement(LayoutElement e, CacheKey key)
+            public void SetElement(LayoutElement e, string layout)
             {
                 this.element = e;
-
-                holder = ScriptableObject.CreateInstance<KeyHolder>();
-                holder.key = key;
+                this.layout = layout;
             }
-        }
-        
-        private class KeyHolder : ScriptableObject
-        {
-            public CacheKey key;
         }
     }
 }

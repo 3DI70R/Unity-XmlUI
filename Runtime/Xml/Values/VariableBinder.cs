@@ -6,6 +6,7 @@ namespace ThreeDISevenZeroR.XmlUI
     {
         public string[] AttributeNames { get; }
         public string VariableName { get; }
+        
         public ValueSetterDelegate<T, P> Setter { get; }
         
         public VariableBinder(string[] attributeNames, string variableName, ValueSetterDelegate<T, P> setter)
@@ -15,22 +16,24 @@ namespace ThreeDISevenZeroR.XmlUI
             VariableName = variableName;
         }
 
-        public IBoundVariable Bind(T instance, IVariableProvider provider)
+        public IBoundVariable Bind(LayoutElement element, T instance, IVariableProvider provider)
         {
             var value = provider.GetValue<P>(VariableName);
-            return new BoundVariable(instance, value, Setter);
+            return new BoundVariable(element, instance, value, Setter);
         }
         
         private class BoundVariable: IBoundVariable
         {
-            private T instance;
-            private IVariableValue<P> value;
-            private ValueSetterDelegate<T, P> setter;
+            private readonly LayoutElement element;
+            private readonly T instance;
+            private readonly IVariableValue<P> value;
+            private readonly ValueSetterDelegate<T, P> setter;
             
             public event Action OnUpdated;
 
-            public BoundVariable(T instance, IVariableValue<P> value, ValueSetterDelegate<T, P> setter)
+            public BoundVariable(LayoutElement element, T instance, IVariableValue<P> value, ValueSetterDelegate<T, P> setter)
             {
+                this.element = element;
                 this.instance = instance;
                 this.value = value;
                 this.setter = setter;
@@ -40,7 +43,7 @@ namespace ThreeDISevenZeroR.XmlUI
             
             public void Apply()
             {
-                setter(instance, value.Value);
+                setter(element, instance, value.Value);
             }
 
             public void Unbind()
@@ -50,7 +53,7 @@ namespace ThreeDISevenZeroR.XmlUI
 
             private void ApplyChanged(P newValue)
             {
-                setter(instance, newValue);
+                setter(element, instance, newValue);
                 OnUpdated?.Invoke();
             }
         }

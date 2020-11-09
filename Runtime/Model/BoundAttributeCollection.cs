@@ -26,7 +26,7 @@ namespace ThreeDISevenZeroR.XmlUI
             childBinders.Add(binder);
         }
         
-        public void AddAttributes<T>(T component, 
+        public void AddAttributes<T>(LayoutElement element, T component, 
             IVariableBinder<T>[] binders, 
             IConstantSetter<T>[] constants) where T : Object
         {
@@ -40,13 +40,13 @@ namespace ThreeDISevenZeroR.XmlUI
             for (var i = 0; i < binders.Length; i++)
             {
                 var setter = binders[i];
-                holder.variables[i] = (c, p) => setter.Bind((T) c, p);
+                holder.variables[i] = (c, p) => setter.Bind(element, (T) c, p);
             }
             
             for (var i = 0; i < constants.Length; i++)
             {
-                var setter = constants[i].SetterDelegate;
-                holder.constants[i] = (c) => setter((T) c);
+                var setter = constants[i].Setter;
+                holder.constants[i] = (c) => setter(element, (T) c);
             }
 
             setters.Add(new BoundReference

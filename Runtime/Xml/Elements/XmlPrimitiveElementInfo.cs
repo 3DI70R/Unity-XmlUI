@@ -10,8 +10,8 @@ namespace ThreeDISevenZeroR.XmlUI
         {
         }
 
-        protected override LayoutElement CreateObject(Type elementType, Transform parent, 
-            BoundAttributeCollection binder, LayoutInflater inflater, Dictionary<string, string> outerAttrs)
+        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder, 
+            LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             var gameObject = new GameObject();
             
@@ -19,8 +19,8 @@ namespace ThreeDISevenZeroR.XmlUI
                 gameObject.AddComponent<RectTransform>();
             
             gameObject.transform.SetParent(parent, false);
-            
-            return (LayoutElement) gameObject.AddComponent(elementType);
+
+            return gameObject.AddComponent<LayoutElement>();
         }
     }
 }

@@ -87,7 +87,7 @@ namespace ThreeDISevenZeroR.XmlUI
         private List<TypeInfo> GetXmlTypes(IEnumerable<IAttributeInfo> attrs)
         {
             return attrs
-                .Select(a => a.SchemaInfo)
+                .Select(a => a.Type)
                 .GroupBy(i => i.typeName)
                 .Select(g => g.First())
                 .ToList();
@@ -229,7 +229,7 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             return new XElement(SchemaNamespace + "attribute", 
                 new XAttribute("name", attr.Name),
-                new XAttribute("type", attr.SchemaInfo.typeName));
+                new XAttribute("type", attr.Type.typeName));
         }
 
         private XElement GetSchemaAttributeRefElement(IAttributeInfo attr)

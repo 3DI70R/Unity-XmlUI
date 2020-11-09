@@ -2,7 +2,7 @@
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    public interface IVariableValue<out T>
+    public interface IVariableValue<T>
     {
         T Value { get; }
 

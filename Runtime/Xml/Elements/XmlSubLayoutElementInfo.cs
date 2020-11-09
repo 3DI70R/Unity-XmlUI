@@ -30,10 +30,10 @@ namespace ThreeDISevenZeroR.XmlUI
             this.documentXml = documentXml;
         }
 
-        protected override LayoutElement CreateObject(Type elementType, Transform parent, BoundAttributeCollection binder,
+        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
-            var element = inflater.Inflate(elementType, parent, documentXml, null, outerAttrs);
+            var element = inflater.Inflate(parent, documentXml, null, outerAttrs);
 
             if (element.TryGetComponent<ComponentVariableBinder>(out var addedBinder))
                 binder.AddChild(addedBinder);
@@ -44,7 +44,7 @@ namespace ThreeDISevenZeroR.XmlUI
         private class PlaceholderAttributeInfo : IAttributeInfo
         {
             public string Name { get; set; }
-            public TypeInfo SchemaInfo => AttributeType.String;
+            public TypeInfo Type => AttributeType.String;
         }
     }
 }

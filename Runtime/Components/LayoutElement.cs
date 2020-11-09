@@ -129,9 +129,15 @@ namespace ThreeDISevenZeroR.XmlUI
         private YogaUpdater yogaUpdater;
         private RectTransform rectTransformRef;
 
-        private bool isHiearchyActive = true;
-        private Visibility visibility = Visibility.Visible;
+        private IChildElementAnimator childAnimator;
 
+        private bool isHiearchyActive = true;
+        private bool isGraphicCallbackRegistered;
+        private Visibility visibility = Visibility.Visible;
+        
+        private float prevMeasureWidth;
+        private float prevMeasureHeight;
+ 
         public string GetYogaInfo()
         {
             return Node.Print(YogaPrintOptions.Style);
@@ -162,17 +168,17 @@ namespace ThreeDISevenZeroR.XmlUI
             return default;
         }
         
-        public virtual void OnCreatedFromXml() { }
-        public virtual void OnReturnedToPool() { }
-        public virtual void OnBroughtBackFromPool() { }
+        public void OnCreatedFromXml() { }
+        public void OnReturnedToPool() { }
+        public void OnBroughtBackFromPool() { }
         
-        public virtual void ActivateHierarchy()
+        public void ActivateHierarchy()
         {
             gameObject.SetActive(true);
             isHiearchyActive = true;
         }
 
-        public virtual void DeactivateHierarchy()
+        public void DeactivateHierarchy()
         {
             gameObject.SetActive(false);
             isHiearchyActive = false;
@@ -198,13 +204,56 @@ namespace ThreeDISevenZeroR.XmlUI
             if (Node.IsDirty)
             {
                 Node.CalculateLayout();
-                OnLayoutUpdated();
+                UpdateLayout(childAnimator);
+            }
+        }
+
+        private void UnregisterMeasureElement()
+        {
+            if (measuredElement is Graphic g && isGraphicCallbackRegistered)
+            {
+                Node.SetMeasureFunction(null);
+                g.UnregisterDirtyLayoutCallback(MarkDirtyIfMeasuredElementChanged);
+            }
+            
+            isGraphicCallbackRegistered = false;
+        }
+
+        private void UpdateMeasureElement()
+        {
+            var shouldHaveDirtyMarker = false;
+            
+            if (measuredElement)
+            {
+                Node.SetMeasureFunction(MeasureElement);
+                
+                if (measuredElement is Graphic g && !isGraphicCallbackRegistered)
+                {
+                    g.RegisterDirtyLayoutCallback(MarkDirtyIfMeasuredElementChanged);
+                    isGraphicCallbackRegistered = true;
+                }
+                else
+                {
+                    shouldHaveDirtyMarker = true;
+                }
+            }
+            
+            if (shouldHaveDirtyMarker && !measuredElementDirtyMarker)
+            {
+                measuredElementDirtyMarker = gameObject.AddComponent<YogaMeasureDirtyWatcher>();
+                measuredElementDirtyMarker.element = this;
+            }
+            else if (!shouldHaveDirtyMarker && measuredElementDirtyMarker)
+            {
+                DestroyImmediate(measuredElementDirtyMarker);
             }
         }
         
         public void SetMeasuredElement(UIBehaviour element)
         {
-            this.measuredElement = element;
+            UnregisterMeasureElement();
+            measuredElement = element;
+            UpdateMeasureElement();
         }
         
         public void MoveChild(LayoutElement child, int newIndex)
@@ -273,12 +322,12 @@ namespace ThreeDISevenZeroR.XmlUI
                 DestroyImmediate(yogaUpdater);
             }
         }
-
-        private void OnLayoutUpdated()
+        
+        private void UpdateLayout(IChildElementAnimator animator)
         {
             if (yogaNode.HasNewLayout)
             {
-                var width = yogaNode.LayoutWidth;
+                /*var width = yogaNode.LayoutWidth;
                 var height = yogaNode.LayoutHeight;
                 
                 if (parentElement)
@@ -293,9 +342,9 @@ namespace ThreeDISevenZeroR.XmlUI
                 RectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
 
                 foreach (var element in childElements)
-                    element.OnLayoutUpdated();
+                    element.OnLayoutUpdated(childAnimator);
                 
-                yogaNode.MarkLayoutSeen();
+                yogaNode.MarkLayoutSeen();*/
             }
         }
 
@@ -305,20 +354,10 @@ namespace ThreeDISevenZeroR.XmlUI
                 return;
 
             yogaNode = new YogaNode();
+            UpdateMeasureElement();
 
             foreach (var element in childElements)
                 yogaNode.AddChild(element.Node);
-
-            if (measuredElement)
-            {
-                if (!measuredElementDirtyMarker)
-                {
-                    measuredElementDirtyMarker = gameObject.AddComponent<YogaMeasureDirtyWatcher>();
-                    measuredElementDirtyMarker.element = this;
-                }
-
-                yogaNode.SetMeasureFunction(MeasureElement);
-            }
         }
 
         private YogaSize MeasureElement(YogaNode node, 
@@ -400,11 +439,21 @@ namespace ThreeDISevenZeroR.XmlUI
             parentElement = parent;
             UpdateLayoutUpdater();
         }
-
-        private void MarkYogaDirty()
+        
+        private void MarkDirtyIfMeasuredElementChanged()
         {
-            if(yogaNode != null && yogaNode.IsMeasureDefined)
-                yogaNode.MarkDirty();
+            if(!(measuredElement is ILayoutElement e))
+                return;
+            
+            if (e.preferredWidth != prevMeasureWidth || 
+                e.preferredHeight != prevMeasureHeight)
+            {
+                prevMeasureWidth = e.preferredWidth;
+                prevMeasureHeight = e.preferredHeight;
+                    
+                if(yogaNode != null && yogaNode.IsMeasureDefined)
+                    yogaNode.MarkDirty();
+            }
         }
 
         private class YogaUpdater : MonoBehaviour
@@ -418,23 +467,9 @@ namespace ThreeDISevenZeroR.XmlUI
         private class YogaMeasureDirtyWatcher : UIBehaviour, ILayoutSelfController
         {
             public LayoutElement element;
-            private float prevWidth;
-            private float prevHeight;
 
-            private void MarkDirtyIfChanged()
-            {
-                if (element.measuredElement is ILayoutElement e 
-                    && (e.preferredWidth != prevWidth || e.preferredHeight != prevHeight))
-                {
-                    prevWidth = e.preferredWidth;
-                    prevHeight = e.preferredHeight;
-                    
-                    element.MarkYogaDirty();
-                }
-            }
-
-            public void SetLayoutHorizontal() => MarkDirtyIfChanged();
-            public void SetLayoutVertical() => MarkDirtyIfChanged();
+            public void SetLayoutHorizontal() => element.MarkDirtyIfMeasuredElementChanged();
+            public void SetLayoutVertical() => element.MarkDirtyIfMeasuredElementChanged();
         }
     }
 }

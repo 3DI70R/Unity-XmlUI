@@ -14,18 +14,10 @@ namespace ThreeDISevenZeroR.XmlUI
             prefabElement = prefab;
         }
 
-        protected override LayoutElement CreateObject(Type elementType, Transform parent, 
-            BoundAttributeCollection binder, LayoutInflater inflater, Dictionary<string, string> outerAttrs)
+        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder, 
+            LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
-            var instance = Object.Instantiate(prefabElement, parent, false);
-
-            if (!instance.TryGetComponent(elementType, out var result))
-            {
-                throw new ArgumentException("Unable to create element from prefab, " +
-                                            $"prefab doesnt contain component of type {elementType.Name}");
-            }
-
-            return instance;
+            return Object.Instantiate(prefabElement, parent, false);
         }
     }
 }

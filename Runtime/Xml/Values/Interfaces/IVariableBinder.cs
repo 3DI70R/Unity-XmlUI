@@ -4,6 +4,6 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public interface IVariableBinder<in T> : IValueHandler
     {
-        IBoundVariable Bind(T instance, IVariableProvider provider);
+        IBoundVariable Bind(LayoutElement element, T instance, IVariableProvider provider);
     }
 }

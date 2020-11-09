@@ -12,21 +12,7 @@ namespace ThreeDISevenZeroR.XmlUI
         private readonly List<PropertyInfo> propertyInfos =
             new List<PropertyInfo>();
 
-        private readonly List<string> propertyNames =
-            new List<string>();
-
         public IAttributeInfo[] Attributes => propertyInfos.Cast<IAttributeInfo>().ToArray();
-
-        public bool HasRequiredAttributes(Dictionary<string, string> attributes)
-        {
-            for (var i = 0; i < propertyNames.Count; i++)
-            {
-                if (attributes.ContainsKey(propertyNames[i]))
-                    return true;
-            }
-
-            return false;
-        }
 
         public IAttributeCollection<T> ParseAttributes(Dictionary<string, string> attributes)
         {
@@ -80,13 +66,11 @@ namespace ThreeDISevenZeroR.XmlUI
             ValueSetterDelegate<T, P> setter, bool isSerializable = true)
         {
             var parser = typeInfo.parser;
-            
-            propertyNames.Add(name);
+
             propertyInfos.Add(new PropertyInfo
             {
                 name = name,
                 schema = typeInfo,
-                type = typeof(P),
                 propertyParser = (values, props) =>
                 {
                     if(!values.TryGetValue(name, out var attrText))
@@ -129,14 +113,11 @@ namespace ThreeDISevenZeroR.XmlUI
         private class PropertyInfo : IAttributeInfo
         {
             public string name;
-            public Type type;
             public TypeInfo schema;
             public Action<Dictionary<string, string>, ParsedAttributes> propertyParser;
 
             public string Name => name;
-            public Type Type => type;
-            public Type TargetType => typeof(T);
-            public TypeInfo SchemaInfo => schema;
+            public TypeInfo Type => schema;
         }
 
         private class ParsedAttributes
@@ -150,7 +131,7 @@ namespace ThreeDISevenZeroR.XmlUI
             public void AddConstant<P>(string attributeName, P value, 
                 ValueSetterDelegate<T, P> apply, bool isInstanceConstant)
             {
-                Constants.Add(new ConstantSetter<T>(new[] {attributeName}, t => apply(t, value), isInstanceConstant));
+                Constants.Add(new ConstantSetter<T>(new[] {attributeName}, (e, t) => apply(e, t, value), isInstanceConstant));
             }
 
             public void AddVariable<P>(string attributeName, string variableName, ValueSetterDelegate<T, P> apply)
@@ -176,12 +157,7 @@ namespace ThreeDISevenZeroR.XmlUI
             }
 
             public IAttributeInfo[] Attributes => parent.Attributes;
-
-            public bool HasRequiredAttributes(Dictionary<string, string> attributes)
-            {
-                return parent.HasRequiredAttributes(attributes);
-            }
-
+            
             public IAttributeCollection<O> ParseAttributes(Dictionary<string, string> ownAttributes)
             {
                 var parsed = parent.ParseAttributesInternal(ownAttributes);
@@ -201,17 +177,17 @@ namespace ThreeDISevenZeroR.XmlUI
                         .ToArray();
 
                     var delegates = list
-                        .Select(c => c.SetterDelegate)
+                        .Select(c => c.Setter)
                         .ToArray();
                     
                     return new IConstantSetter<O>[]
                     {
-                        new ConstantSetter<O>(attributes, o =>
+                        new ConstantSetter<O>(attributes, (e, o) =>
                         {
                             batchGetter(o, batchObject);
 
                             foreach (var d in delegates)
-                                d(batchObject);
+                                d(e, batchObject);
 
                             batchSetter(o, batchObject);
                         }, isInstance)
@@ -262,12 +238,12 @@ namespace ThreeDISevenZeroR.XmlUI
                 this.batchObject = batchObject;
             }
 
-            public IBoundVariable Bind(O instance, IVariableProvider provider)
+            public IBoundVariable Bind(LayoutElement element, O instance, IVariableProvider provider)
             {
                 var boundVariables = new IBoundVariable[variableBinders.Length];
                 
                 for (var i = 0; i < boundVariables.Length; i++)
-                    boundVariables[i] = variableBinders[i].Bind(batchObject, provider);
+                    boundVariables[i] = variableBinders[i].Bind(element, batchObject, provider);
 
                 return new BoundVariable(this, instance, boundVariables);
             }

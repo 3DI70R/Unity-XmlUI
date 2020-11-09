@@ -3,6 +3,6 @@
     public interface IAttributeInfo
     {
         string Name { get; }
-        TypeInfo SchemaInfo { get; }
+        TypeInfo Type { get; }
     }
 }
