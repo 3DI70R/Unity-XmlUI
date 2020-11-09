@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -10,7 +11,7 @@ namespace ThreeDISevenZeroR.XmlUI
         
         public BaseXmlElementInfo(string name) : base(name)
         { 
-            AddComponent(AttributeHandlers.LayoutElement, AttributeHandlers.LayoutElementYogaParams);
+            AddComponent(AttributeHandlers.LayoutElement);
         }
 
         protected override ObjectBuildFactory CreateEmptyFactory() => 
@@ -26,8 +27,8 @@ namespace ThreeDISevenZeroR.XmlUI
             return this;
         }
 
-        protected abstract LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder,
-            LayoutInflater inflater, Dictionary<string, string> outerAttrs);
+        protected abstract LayoutElement CreateObject(Type elementType, Transform parent, 
+            BoundAttributeCollection binder, LayoutInflater inflater, Dictionary<string, string> outerAttrs);
 
         public class ObjectBuildFactory : ElementBuildFactory, IXmlElementFactory
         {
@@ -52,10 +53,10 @@ namespace ThreeDISevenZeroR.XmlUI
                 });
             }
 
-            public LayoutElement CreateElement(Transform parent, BoundAttributeCollection binders,
+            public LayoutElement CreateElement(Type elementType, Transform parent, BoundAttributeCollection binders,
                 LayoutInflater inflater, Dictionary<string, string> outerAttrs)
             {
-                var element = parentElement.CreateObject(parent, binders, inflater, outerAttrs);
+                var element = parentElement.CreateObject(elementType, parent, binders, inflater, outerAttrs);
                 element.RectTransform.anchorMin = new Vector2(0, 1); // Top left
                 element.RectTransform.anchorMax = new Vector2(0, 1);
                 element.RectTransform.pivot = new Vector2(0.5f, 0.5f); // Center

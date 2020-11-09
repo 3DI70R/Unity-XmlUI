@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    public class SubLayoutXmlElementInfo : BaseXmlElementInfo
+    public class XmlSubLayoutElementInfo : BaseXmlElementInfo
     {
         private readonly string documentXml;
         private List<PlaceholderAttributeInfo> placeholderAttrs;
@@ -24,15 +25,15 @@ namespace ThreeDISevenZeroR.XmlUI
             }
         }
 
-        public SubLayoutXmlElementInfo(string name, string documentXml) : base(name)
+        public XmlSubLayoutElementInfo(string name, string documentXml) : base(name)
         {
             this.documentXml = documentXml;
         }
 
-        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder,
+        protected override LayoutElement CreateObject(Type elementType, Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
-            var element = inflater.Inflate(parent, documentXml, null, outerAttrs);
+            var element = inflater.Inflate(elementType, parent, documentXml, null, outerAttrs);
 
             if (element.TryGetComponent<ComponentVariableBinder>(out var addedBinder))
                 binder.AddChild(addedBinder);
@@ -43,7 +44,7 @@ namespace ThreeDISevenZeroR.XmlUI
         private class PlaceholderAttributeInfo : IAttributeInfo
         {
             public string Name { get; set; }
-            public XmlTypeSchema SchemaInfo => XmlTypeSchema.String;
+            public TypeInfo SchemaInfo => AttributeType.String;
         }
     }
 }

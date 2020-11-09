@@ -84,7 +84,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return ConvertToString(root);
         }
 
-        private List<XmlTypeSchema> GetXmlTypes(IEnumerable<IAttributeInfo> attrs)
+        private List<TypeInfo> GetXmlTypes(IEnumerable<IAttributeInfo> attrs)
         {
             return attrs
                 .Select(a => a.SchemaInfo)
@@ -264,7 +264,7 @@ namespace ThreeDISevenZeroR.XmlUI
                     new XElement(SchemaNamespace + "pattern", new XAttribute("value", regex))));
         }
 
-        private XElement GetSchemaTypeElement(XmlTypeSchema schema)
+        private XElement GetSchemaTypeElement(TypeInfo schema)
         {
             var typeElement = new XElement(SchemaNamespace + "simpleType", 
                 new XAttribute("name", schema.typeName));

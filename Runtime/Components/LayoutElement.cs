@@ -8,6 +8,8 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public class LayoutElement : MonoBehaviour
     {
+        public Transform ChildParentTransform => Container.transform;
+        
         public string Id
         {
             get => componentId;
@@ -19,8 +21,6 @@ namespace ThreeDISevenZeroR.XmlUI
             get => childContainer ? childContainer.Container : this;
             set => childContainer = value == this ? null : value;
         }
-
-        public Transform ChildParentTransform => Container.transform;
 
         private YogaNode Node
         {
@@ -145,7 +145,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 return rectTransformRef;
             }
         }
-        
+
         public T FindComponentById<T>(string id)
         {
             if (Id == id && TryGetComponent<T>(out var result))
@@ -162,13 +162,17 @@ namespace ThreeDISevenZeroR.XmlUI
             return default;
         }
         
-        public void ActivateHierarchy()
+        public virtual void OnCreatedFromXml() { }
+        public virtual void OnReturnedToPool() { }
+        public virtual void OnBroughtBackFromPool() { }
+        
+        public virtual void ActivateHierarchy()
         {
             gameObject.SetActive(true);
             isHiearchyActive = true;
         }
 
-        public void DeactivateHierarchy()
+        public virtual void DeactivateHierarchy()
         {
             gameObject.SetActive(false);
             isHiearchyActive = false;

@@ -3,6 +3,6 @@
     public interface IAttributeInfo
     {
         string Name { get; }
-        XmlTypeSchema SchemaInfo { get; }
+        TypeInfo SchemaInfo { get; }
     }
 }

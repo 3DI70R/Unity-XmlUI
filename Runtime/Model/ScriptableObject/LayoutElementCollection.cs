@@ -14,7 +14,7 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             foreach (var e in elements)
             {
-                var xmlElement = new SubLayoutXmlElementInfo(e.elementName, e.layout.text)
+                var xmlElement = new XmlSubLayoutElementInfo(e.elementName, e.layout.text)
                     .AddGenericProperties();
 
                 if (e.addButton)

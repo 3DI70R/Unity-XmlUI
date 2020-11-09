@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Facebook.Yoga;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -8,15 +9,11 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public class AttributeHandler<T> : IAttributeHandler<T>
     {
-        public delegate bool StringParser<P>(string text, out P value);
-
         private readonly List<PropertyInfo> propertyInfos =
             new List<PropertyInfo>();
 
         private readonly List<string> propertyNames =
             new List<string>();
-
-        private bool isConstantsSerializable = true;
 
         public IAttributeInfo[] Attributes => propertyInfos.Cast<IAttributeInfo>().ToArray();
 
@@ -51,33 +48,44 @@ namespace ThreeDISevenZeroR.XmlUI
 
             return attrs;
         }
-
-        public AttributeHandler<T> SetConstantsSerializable(bool isSerializable)
-        {
-            isConstantsSerializable = isSerializable;
-            return this;
-        }
-
-        public AttributeHandler<T> AddResourceProperty<P>(string name, ValueSetterDelegate<T, P> setter) 
-            where P : Object => AddGenericProperty(name, XmlTypeSchema.String, (string text, out P value) => {
-                value = Resources.Load<P>(text);
-
-                if (!value)
-                    value = Resources.GetBuiltinResource<P>(text);
-                
-                return value;
-            }, setter);
         
-        public AttributeHandler<T> AddEnumProperty<P>(string name, ValueSetterDelegate<T, P> setter) 
-            where P : struct, Enum => AddGenericProperty(name, XmlTypeSchema.GetEnumSchema<P>(), Enum.TryParse, setter);
+        public AttributeHandler<T> AddStringAttr(string name, ValueSetterDelegate<T, string> setter, bool isSerializable = true) => 
+            AddGenericAttr(AttributeType.String, name, setter, isSerializable);
 
-        public AttributeHandler<T> AddGenericProperty<P>(string name, XmlTypeSchema schema, StringParser<P> parser, ValueSetterDelegate<T, P> setter)
+        public AttributeHandler<T> AddBoolAttr(string name, ValueSetterDelegate<T, bool> setter, bool isSerializable = true) =>
+            AddGenericAttr(AttributeType.Boolean, name, setter, isSerializable);
+        
+        public AttributeHandler<T> AddIntAttr(string name, ValueSetterDelegate<T, int> setter, bool isSerializable = true) =>
+            AddGenericAttr(AttributeType.Integer, name, setter, isSerializable);
+        
+        public AttributeHandler<T> AddFloatAttr(string name, ValueSetterDelegate<T, float> setter, bool isSerializable = true) =>
+            AddGenericAttr(AttributeType.Float, name, setter, isSerializable);
+        
+        public AttributeHandler<T> AddColorAttr(string name, ValueSetterDelegate<T, Color> setter, bool isSerializable = true) => 
+            AddGenericAttr(AttributeType.HtmlColor, name, setter, isSerializable);
+
+        public AttributeHandler<T> AddVectorAttr(string name, ValueSetterDelegate<T, Vector4> setter, bool isSerializable = true) => 
+            AddGenericAttr(AttributeType.VectorValue, name, setter, isSerializable);
+        
+        public AttributeHandler<T> AddYogaValueAttr(string name, ValueSetterDelegate<T, YogaValue> setter, bool isSerializable = true) =>
+            AddGenericAttr(AttributeType.YogaValue, name, setter, isSerializable);
+
+        public AttributeHandler<T> AddResourceAttr<P>(string name, ValueSetterDelegate<T, P> setter, bool isSerializable = true) 
+            where P : Object => AddGenericAttr(AttributeType.GetResourceType<P>(), name, setter, isSerializable);
+        
+        public AttributeHandler<T> AddEnumAttr<P>(string name, ValueSetterDelegate<T, P> setter, bool isSerializable = true) 
+            where P : struct, Enum => AddGenericAttr(AttributeType.GetEnumTypeInfo<P>(), name, setter, isSerializable);
+
+        public AttributeHandler<T> AddGenericAttr<P>(TypeInfo<P> typeInfo, string name, 
+            ValueSetterDelegate<T, P> setter, bool isSerializable = true)
         {
+            var parser = typeInfo.parser;
+            
             propertyNames.Add(name);
             propertyInfos.Add(new PropertyInfo
             {
                 name = name,
-                schema = schema,
+                schema = typeInfo,
                 type = typeof(P),
                 propertyParser = (values, props) =>
                 {
@@ -101,8 +109,7 @@ namespace ThreeDISevenZeroR.XmlUI
                     }
                     else if (parser(attrText, out var result))
                     {
-                        props.AddConstant(name, result, setter, 
-                            isConstantsSerializable);
+                        props.AddConstant(name, result, setter, isSerializable);
                     }
                     else
                     {
@@ -123,13 +130,13 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             public string name;
             public Type type;
-            public XmlTypeSchema schema;
+            public TypeInfo schema;
             public Action<Dictionary<string, string>, ParsedAttributes> propertyParser;
 
             public string Name => name;
             public Type Type => type;
             public Type TargetType => typeof(T);
-            public XmlTypeSchema SchemaInfo => schema;
+            public TypeInfo SchemaInfo => schema;
         }
 
         private class ParsedAttributes
