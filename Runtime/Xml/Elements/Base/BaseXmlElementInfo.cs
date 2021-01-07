@@ -20,14 +20,16 @@ namespace ThreeDISevenZeroR.XmlUI
         public IXmlElementFactory CreateFactory(Dictionary<string, string> attrs) => 
             base.BuildFactory(attrs);
 
-        public BaseXmlElementInfo SetMeasuredComponent<T>() where T : UIBehaviour
+        public BaseXmlElementInfo SetMeasuredComponent<T, W>() 
+            where T : UIBehaviour
+            where W : MeasureDirtyWatcher
         {
             SupportsChildren = false;
-            factoryBuildActions.Add((obj, attrs) => { obj.SetMeasuredElement<T>(); });
+            factoryBuildActions.Add((obj, attrs) => { obj.SetMeasuredElement<T, W>(); });
             return this;
         }
 
-        protected abstract LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder, 
+        protected abstract XmlLayoutElement CreateObject(Transform parent, BoundAttributeCollection binder, 
             LayoutInflater inflater, Dictionary<string, string> outerAttrs);
 
         public class ObjectBuildFactory : ElementBuildFactory, IXmlElementFactory
@@ -45,15 +47,20 @@ namespace ThreeDISevenZeroR.XmlUI
                 SupportsChildren = supportsChildren;
             }
 
-            public void SetMeasuredElement<T>() where T : UIBehaviour
+            public void SetMeasuredElement<T, W>() 
+                where T : UIBehaviour 
+                where W : MeasureDirtyWatcher
             {
                 objectBuildActions.Add((prefabObject, binder) =>
                 {
-                    prefabObject.SetMeasuredElement(prefabObject.GetComponent<T>());
+                    var watcher = prefabObject.gameObject.AddComponent<W>();
+                    watcher.behaviour = prefabObject.GetComponent<T>();
+                    watcher.target = prefabObject;
+                    prefabObject.SetUseDirtyWatcher(watcher);
                 });
             }
 
-            public LayoutElement CreateElement(Transform parent, BoundAttributeCollection binders,
+            public XmlLayoutElement CreateElement(Transform parent, BoundAttributeCollection binders,
                 LayoutInflater inflater, Dictionary<string, string> outerAttrs)
             {
                 var element = parentElement.CreateObject(parent, binders, inflater, outerAttrs);
@@ -65,7 +72,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 return element;
             }
 
-            public void BindAttrs(LayoutElement element, BoundAttributeCollection collection)
+            public void BindAttrs(XmlLayoutElement element, BoundAttributeCollection collection)
             {
                 for (var i = 0; i < objectBuildActions.Count; i++) 
                     objectBuildActions[i](element, collection);

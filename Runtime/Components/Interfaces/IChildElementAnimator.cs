@@ -4,10 +4,10 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public interface IChildElementAnimator
     {
-        void AnimateChildAppear(LayoutElement element, CanvasGroup group, Rect target);
-        void AnimateChildMove(LayoutElement element, Vector2 position);
-        void AnimateChildDisappear(LayoutElement element, CanvasGroup group);
-        void AnimateContainerResize(LayoutElement element, Vector2 size);
+        void AnimateChildAppear(XmlLayoutElement element, CanvasGroup group, Rect target);
+        void AnimateChildMove(XmlLayoutElement element, Vector2 position);
+        void AnimateChildDisappear(XmlLayoutElement element, CanvasGroup group);
+        void AnimateContainerResize(XmlLayoutElement element, Vector2 size);
 
         void StartAnimation();
         void FinishAnimation();

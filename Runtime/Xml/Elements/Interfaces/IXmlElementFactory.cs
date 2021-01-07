@@ -8,7 +8,7 @@ namespace ThreeDISevenZeroR.XmlUI
     {
         bool SupportsChildren { get; }
 
-        LayoutElement CreateElement(Transform root, BoundAttributeCollection collection, 
+        XmlLayoutElement CreateElement(Transform root, BoundAttributeCollection collection, 
             LayoutInflater inflater, Dictionary<string, string> outerAttrs);
     }
 }

@@ -2,7 +2,7 @@
 {
     public interface IXmlComponentFactory
     {
-        void BindAttrs(LayoutElement element, 
+        void BindAttrs(XmlLayoutElement element, 
             BoundAttributeCollection collection);
     }
 }

@@ -7,14 +7,14 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public class XmlPrefabElementInfo : BaseXmlElementInfo
     {
-        private readonly LayoutElement prefabElement;
+        private readonly XmlLayoutElement prefabElement;
         
-        public XmlPrefabElementInfo(string name, LayoutElement prefab) : base(name)
+        public XmlPrefabElementInfo(string name, XmlLayoutElement prefab) : base(name)
         {
             prefabElement = prefab;
         }
 
-        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder, 
+        protected override XmlLayoutElement CreateObject(Transform parent, BoundAttributeCollection binder, 
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             return Object.Instantiate(prefabElement, parent, false);

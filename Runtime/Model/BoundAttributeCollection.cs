@@ -26,7 +26,7 @@ namespace ThreeDISevenZeroR.XmlUI
             childBinders.Add(binder);
         }
         
-        public void AddAttributes<T>(LayoutElement element, T component, 
+        public void AddAttributes<T>(XmlLayoutElement element, T component, 
             IVariableBinder<T>[] binders, 
             IConstantSetter<T>[] constants) where T : Object
         {

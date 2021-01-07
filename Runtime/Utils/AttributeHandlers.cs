@@ -1,4 +1,5 @@
 ﻿using Facebook.Yoga;
+using UnityEditor.Graphs;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,9 +7,10 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public static class AttributeHandlers
     {
-        public static readonly IAttributeHandler<LayoutElement> LayoutElement = new AttributeHandler<LayoutElement>()
+        public static readonly IAttributeHandler<XmlLayoutElement> LayoutElement = new AttributeHandler<XmlLayoutElement>()
             .AddStringAttr("Id", (e, c, v) => c.Id = v)
             .AddEnumAttr<Visibility>("Visibility", (e, c, v) => c.Visibility = v)
+            .AddBoolAttr("UseMeasure", (e, c, v) => c.UseMeasure = v)
 
             .AddYogaValueAttr("Left", (e, c, v) => c.OffsetLeft = v, false)
             .AddYogaValueAttr("Top", (e, c, v) => c.OffsetTop = v, false)
@@ -131,8 +133,8 @@ namespace ThreeDISevenZeroR.XmlUI
                 });
 
         public static readonly IAttributeHandler<InputField> InputField = new AttributeHandler<InputField>()
-            .AddStringAttr("TextId", (e, c, v) => c.textComponent = e.FindComponentById<Text>(v))
-            .AddStringAttr("PlaceholderId", (e, c, v) => c.placeholder = e.FindComponentById<Graphic>(v))
+            .AddComponentReferenceAttr<Text>("TextId", (e, c, v) => c.textComponent = v)
+            .AddComponentReferenceAttr<Graphic>("PlaceholderId", (e, c, v) => c.placeholder = v)
             .AddIntAttr("CharacterLimit", (e, c, v) => c.characterLimit = v)
             .AddEnumAttr<InputField.ContentType>("ContentType", (e, c, v) => c.contentType = v)
             .AddEnumAttr<InputField.LineType>("LineType", (e, c, v) => c.lineType = v)
@@ -147,11 +149,17 @@ namespace ThreeDISevenZeroR.XmlUI
             .AddBoolAttr("HideMobileInput", (e, c, v) => c.shouldHideMobileInput = v)
             .AddBoolAttr("ReadOnly", (e, c, v) => c.readOnly = v);
 
+        public static readonly IAttributeHandler<Toggle> Toggle = new AttributeHandler<Toggle>()
+            .AddEnumAttr<Toggle.ToggleTransition>("ToggleTransition", (e, c, v) => c.toggleTransition = v)
+            .AddComponentReferenceAttr<Graphic>("GraphicId", (e, c, v) => c.graphic = v)
+            .AddBoolAttr("IsOn", (e, c, v) => c.isOn = v);
+
         // -- Graphic
 
         public static readonly IAttributeHandler<Graphic> Graphic = new AttributeHandler<Graphic>()
-            .AddColorAttr("Color", (e, d, p) => d.color = p)
-            .AddResourceAttr<Material>("Material", (e, d, p) => d.material = p);
+            .AddColorAttr("Color", (e, c, v) => c.color = v)
+            .AddResourceAttr<Material>("Material", (e, c, v) => c.material = v)
+            .AddBoolAttr("RaycastTarget", (e, c, v) => c.raycastTarget = v);
         
         public static readonly IAttributeHandler<Mask> Mask = new AttributeHandler<Mask>()
             .AddBoolAttr("ShowMaskGraphic", (e, c, v) => c.showMaskGraphic = v);

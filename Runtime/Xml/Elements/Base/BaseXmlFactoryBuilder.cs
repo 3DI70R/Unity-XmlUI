@@ -8,7 +8,7 @@ namespace ThreeDISevenZeroR.XmlUI
     public abstract class BaseXmlFactoryBuilder<B, F> where B : BaseXmlFactoryBuilder<B, F> 
         where F : BaseXmlFactoryBuilder<B, F>.ElementBuildFactory
     {
-        public delegate void ObjectBuilder(LayoutElement obj, BoundAttributeCollection binder);
+        public delegate void ObjectBuilder(XmlLayoutElement obj, BoundAttributeCollection binder);
         
         protected readonly List<Action<F, Dictionary<string, string>>> factoryBuildActions = 
             new List<Action<F, Dictionary<string, string>>>();
@@ -41,7 +41,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return AddComponent(null, handlers);
         }
 
-        public B AddComponent<T>(Action<T, LayoutElement> configurator, params IAttributeHandler<T>[] handlers) 
+        public B AddComponent<T>(Action<T, XmlLayoutElement> configurator, params IAttributeHandler<T>[] handlers) 
             where T : Component
         {
             AddAttributes(handlers);
@@ -55,7 +55,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return AddOptionalComponent(null, handlers);
         }
 
-        public B AddOptionalComponent<T>(Action<T, LayoutElement> configurator, params IAttributeHandler<T>[] handlers)
+        public B AddOptionalComponent<T>(Action<T, XmlLayoutElement> configurator, params IAttributeHandler<T>[] handlers)
             where T : Component
         {
             AddAttributes(handlers);
@@ -112,7 +112,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 });
             }
             
-            public void AddComponent<T>(Action<T, LayoutElement> componentConfig, IAttributeCollection<T> attrs = null) where T : Component
+            public void AddComponent<T>(Action<T, XmlLayoutElement> componentConfig, IAttributeCollection<T> attrs = null) where T : Component
             {
                 objectBuildActions.Add((prefabObject, binder) =>
                 {
@@ -132,7 +132,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 });
             }
 
-            public void BindAttrs(LayoutElement element, 
+            public void BindAttrs(XmlLayoutElement element, 
                 BoundAttributeCollection collection)
             {
                 for (var i = 0; i < objectBuildActions.Count; i++) 

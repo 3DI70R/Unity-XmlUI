@@ -1,12 +1,10 @@
 ﻿using System.Collections.Generic;
 using Facebook.Yoga;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    public class LayoutElement : MonoBehaviour
+    public class XmlLayoutElement : MonoBehaviour
     {
         public Transform ChildParentTransform => Container.transform;
         
@@ -16,7 +14,7 @@ namespace ThreeDISevenZeroR.XmlUI
             set => componentId = value;
         }
 
-        public LayoutElement Container
+        public XmlLayoutElement Container
         {
             get => childContainer ? childContainer.Container : this;
             set => childContainer = value == this ? null : value;
@@ -41,7 +39,7 @@ namespace ThreeDISevenZeroR.XmlUI
             }
         }
 
-        public IReadOnlyList<LayoutElement> Children => childElements;
+        public IReadOnlyList<XmlLayoutElement> Children => childElements;
         
         public YogaValue OffsetLeft { get => Node.Left; set => Node.Left = value; }
         public YogaValue OffsetTop { get => Node.Top; set => Node.Top = value; }
@@ -76,18 +74,32 @@ namespace ThreeDISevenZeroR.XmlUI
         public YogaAlign AlignItems { get => Node.AlignItems; set => Node.AlignItems = value; }
         public YogaAlign AlignSelf { get => Node.AlignSelf; set => Node.AlignSelf = value; }
         public YogaAlign AlignContent { get => Node.AlignContent; set => Node.AlignContent = value; }
-        public YogaPositionType PositionType { get => Node.PositionType; set => Node.PositionType = value; }
+        public YogaPositionType PositionType { get => Node.PositionType; set { Node.PositionType = value; } }
+
         public YogaWrap Wrap { get => Node.Wrap; set => Node.Wrap = value; }
         public float Flex { set => Node.Flex = value; }
         public float FlexGrow { get => Node.FlexGrow; set => Node.FlexGrow = value; }
         public float FlexShrink { get => Node.FlexShrink; set => Node.FlexShrink = value; }
         public YogaValue FlexBasis { get => Node.FlexBasis; set => Node.FlexBasis = value; }
         
+        public bool UseMeasure
+        {
+            get => useDirtyWatcher;
+            set 
+            {
+                useDirtyWatcher = value;
+                UpdateDirtyWatcher();
+            }
+        }
+
         public Visibility Visibility
         {
             get => visibility;
             set
             {
+                if (visibility == value) 
+                    return;
+                
                 visibility = value;
                 UpdateVisibility();
             }
@@ -103,33 +115,34 @@ namespace ThreeDISevenZeroR.XmlUI
         public YogaOverflow Overflow { get => Node.Overflow; set => Node.Overflow = value; }
 
         [SerializeField]
-        private LayoutElement childContainer;
+        private XmlLayoutElement childContainer;
 
-        [SerializeField]
-        [HideInInspector]
-        private LayoutElement parentElement;
+        [SerializeField, HideInInspector]
+        private XmlLayoutElement parentElement;
         
         [SerializeField]
         private string componentId;
 
-        [SerializeField]
-        [HideInInspector]
-        private List<LayoutElement> childElements 
-            = new List<LayoutElement>();
-        
-        [SerializeField]
-        [HideInInspector]
-        private UIBehaviour measuredElement;
-        
-        [SerializeField]
-        [HideInInspector]
-        private YogaMeasureDirtyWatcher measuredElementDirtyMarker;
+        [SerializeField, HideInInspector]
+        private List<XmlLayoutElement> childElements 
+            = new List<XmlLayoutElement>();
 
-        private List<LayoutElement> removedElements = 
-            new List<LayoutElement>();
+        [SerializeField, HideInInspector]
+        private MeasureDirtyWatcher dirtyWatcher;
 
-        private HashSet<LayoutElement> addedElements 
-            = new HashSet<LayoutElement>();
+        [SerializeField]
+        [HideInInspector]
+        private Visibility visibility = Visibility.Visible;
+
+        [SerializeField, 
+         HideInInspector] 
+        private bool useDirtyWatcher = true;
+
+        private List<XmlLayoutElement> hidePendingElements = 
+            new List<XmlLayoutElement>();
+
+        private HashSet<XmlLayoutElement> showPendingElements 
+            = new HashSet<XmlLayoutElement>();
 
         private bool autoUpdateLayout = true;
         private bool skipLayoutUpdater = true;
@@ -137,16 +150,13 @@ namespace ThreeDISevenZeroR.XmlUI
         private YogaUpdater yogaUpdater;
         private RectTransform rectTransformRef;
         private IChildElementAnimator childAnimator;
+        
+        private bool isFirstLayoutUpdateReceived;
 
-        private bool isHiearchyActive = true;
-        private bool isAnimationActive;
+        private bool UseAnimatedTransitions => childAnimator != null && isFirstLayoutUpdateReceived;
         
         private bool isGraphicCallbackRegistered;
-        private Visibility visibility = Visibility.Visible;
-        
-        private float prevMeasureWidth;
-        private float prevMeasureHeight;
- 
+
         public string GetYogaInfo()
         {
             return Node.Print(YogaPrintOptions.Style);
@@ -164,7 +174,6 @@ namespace ThreeDISevenZeroR.XmlUI
         public void SetChildAnimator(IChildElementAnimator animator)
         {
             childAnimator = animator;
-            isAnimationActive = childAnimator != null;
         }
 
         public T FindComponentById<T>(string id)
@@ -182,31 +191,72 @@ namespace ThreeDISevenZeroR.XmlUI
             
             return default;
         }
-        
+
         public void OnCreatedFromXml() { }
         public void OnReturnedToPool() { }
         public void OnBroughtBackFromPool() { }
         
         public void ActivateHierarchy()
         {
+            if(gameObject.activeSelf)
+                return;
+            
             gameObject.SetActive(true);
-            isHiearchyActive = true;
         }
 
         public void DeactivateHierarchy()
         {
+            if(!gameObject.activeSelf)
+                return;
+            
             gameObject.SetActive(false);
-            isHiearchyActive = false;
         }
-        
+
         private void UpdateVisibility()
         {
-            var isActive = isHiearchyActive && visibility == Visibility.Visible;
-
-            if(gameObject.activeSelf != isActive)
-                gameObject.SetActive(isActive);
+            var isVisible = visibility == Visibility.Visible;
+            
+            if (parentElement)
+            {
+                parentElement.OnChildVisibilityChanged(this, isVisible);
+            }
+            else
+            {
+                SetElementEnabled(this, isVisible);
+            }
 
             Node.Display = visibility != Visibility.Gone ? YogaDisplay.Flex : YogaDisplay.None;
+        }
+
+        private void OnChildVisibilityChanged(XmlLayoutElement element, bool isVisible)
+        {
+            if (UseAnimatedTransitions)
+            {
+                if (isVisible)
+                {
+                    showPendingElements.Add(element);
+                }
+                else
+                {
+                    hidePendingElements.Add(element);
+                }
+            }
+            else
+            {
+                SetElementEnabled(element, isVisible);
+            }
+        }
+
+        private void SetElementEnabled(XmlLayoutElement element, bool isEnabled)
+        {
+            if (isEnabled)
+            {
+                element.ActivateHierarchy();
+            }
+            else
+            {
+                element.DeactivateHierarchy();
+            }
         }
 
         public void DetachFromParent()
@@ -223,55 +273,23 @@ namespace ThreeDISevenZeroR.XmlUI
             }
         }
 
-        private void UnregisterMeasureElement()
+        public void SetUseDirtyWatcher(MeasureDirtyWatcher watcher)
         {
-            if (measuredElement is Graphic g && isGraphicCallbackRegistered)
-            {
-                Node.SetMeasureFunction(null);
-                g.UnregisterDirtyLayoutCallback(MarkDirtyIfMeasuredElementChanged);
-            }
+            if(watcher == dirtyWatcher)
+                return;
             
-            isGraphicCallbackRegistered = false;
+            Node.SetMeasureFunction(null);
+            dirtyWatcher = watcher;
+            UpdateDirtyWatcher();
         }
 
-        private void UpdateMeasureElement()
+        private void UpdateDirtyWatcher()
         {
-            var shouldHaveDirtyMarker = false;
-            
-            if (measuredElement)
-            {
-                Node.SetMeasureFunction(MeasureElement);
-                
-                if (measuredElement is Graphic g && !isGraphicCallbackRegistered)
-                {
-                    g.RegisterDirtyLayoutCallback(MarkDirtyIfMeasuredElementChanged);
-                    isGraphicCallbackRegistered = true;
-                }
-                else
-                {
-                    shouldHaveDirtyMarker = true;
-                }
-            }
-            
-            if (shouldHaveDirtyMarker && !measuredElementDirtyMarker)
-            {
-                measuredElementDirtyMarker = gameObject.AddComponent<YogaMeasureDirtyWatcher>();
-                measuredElementDirtyMarker.element = this;
-            }
-            else if (!shouldHaveDirtyMarker && measuredElementDirtyMarker)
-            {
-                DestroyImmediate(measuredElementDirtyMarker);
-            }
+            if (dirtyWatcher && UseMeasure)
+                Node.SetMeasureFunction(dirtyWatcher.MeasureElement);
         }
         
-        public void SetMeasuredElement(UIBehaviour element)
-        {
-            UnregisterMeasureElement();
-            measuredElement = element;
-            UpdateMeasureElement();
-        }
-        
-        public void MoveChild(LayoutElement child, int newIndex)
+        public void MoveChild(XmlLayoutElement child, int newIndex)
         {
             var childIndex = childElements.IndexOf(child);
 
@@ -285,7 +303,7 @@ namespace ThreeDISevenZeroR.XmlUI
             }
         }
 
-        public void InsertChild(LayoutElement child, int index)
+        public void InsertChild(XmlLayoutElement child, int index)
         {
             if(childElements.Contains(child))
                 return;
@@ -294,14 +312,14 @@ namespace ThreeDISevenZeroR.XmlUI
             Node.Insert(index, child.Node);
             childElements.Insert(index, child);
 
-            if (isAnimationActive)
+            if (UseAnimatedTransitions)
             {
                 child.DeactivateHierarchy();
-                addedElements.Add(child);
+                showPendingElements.Add(child);
             }
         }
 
-        public void AddChild(LayoutElement child)
+        public void AddChild(XmlLayoutElement child)
         {
             if(childElements.Contains(child))
                 return;
@@ -310,22 +328,22 @@ namespace ThreeDISevenZeroR.XmlUI
             Node.AddChild(child.Node);
             childElements.Add(child);
 
-            if (isAnimationActive)
+            if (UseAnimatedTransitions)
             {
                 child.DeactivateHierarchy();
-                addedElements.Add(child);
+                showPendingElements.Add(child);
             }
         }
 
-        public void RemoveChild(LayoutElement child)
+        public void RemoveChild(XmlLayoutElement child)
         {
             if (childElements.Remove(child))
             {
                 Node.RemoveChild(child.Node);
 
-                if (isAnimationActive)
+                if (UseAnimatedTransitions)
                 {
-                    removedElements.Add(child);
+                    hidePendingElements.Add(child);
                 }
                 else
                 {
@@ -338,6 +356,11 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             skipLayoutUpdater = false;
             UpdateLayoutUpdater();
+        }
+
+        private void OnEnable()
+        {
+            isFirstLayoutUpdateReceived = false;
         }
 
         private void UpdateLayoutUpdater()
@@ -360,10 +383,10 @@ namespace ThreeDISevenZeroR.XmlUI
         
         private void OnLayoutUpdated()
         {
-            if(!Node.HasNewLayout)
+            if(!Node.HasNewLayout || !isActiveAndEnabled)
                 return;
-            
-            if (isAnimationActive)
+
+            if (UseAnimatedTransitions)
             {
                 ApplyLayoutWithAnimation();
             }
@@ -371,32 +394,35 @@ namespace ThreeDISevenZeroR.XmlUI
             {
                 ApplyLayoutWithoutAnimation();
             }
-                
-            Node.MarkLayoutSeen();
+
+            isFirstLayoutUpdateReceived = true;
         }
 
         private void ApplyLayoutWithoutAnimation()
         {
-            if (addedElements.Count > 0)
+            if (showPendingElements.Count > 0)
             {
-                foreach (var addedElement in addedElements)
+                foreach (var addedElement in showPendingElements)
                     addedElement.ActivateHierarchy();
                 
-                addedElements.Clear();
+                showPendingElements.Clear();
             }
 
-            if (removedElements.Count > 0)
+            if (hidePendingElements.Count > 0)
             {
-                foreach (var element in removedElements)
+                foreach (var element in hidePendingElements)
                     element.SetParent(null);
                 
-                removedElements.Clear();
+                hidePendingElements.Clear();
             }
             
             foreach (var element in childElements)
             {
-                element.RectTransform.anchoredPosition = GetElementPosition(element);;
-                element.OnLayoutUpdated();
+                if (element.Node.HasNewLayout)
+                {
+                    element.RectTransform.anchoredPosition = GetElementPosition(element);;
+                    element.OnLayoutUpdated();
+                }
             }
             
             RectTransform.sizeDelta = new Vector2(Node.LayoutWidth, Node.LayoutHeight);
@@ -406,12 +432,12 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             childAnimator.FinishAnimation();
 
-            if (removedElements.Count > 0)
+            if (hidePendingElements.Count > 0)
             {
-                foreach (var removedElement in removedElements)
+                foreach (var removedElement in hidePendingElements)
                     childAnimator.AnimateChildDisappear(removedElement, null);
 
-                removedElements.Clear();
+                hidePendingElements.Clear();
             }
             
             var newSize = new Vector2(Node.LayoutWidth, Node.LayoutHeight);
@@ -425,14 +451,14 @@ namespace ThreeDISevenZeroR.XmlUI
             {
                 var position = GetElementPosition(element);
                 
-                if (addedElements.Contains(element))
+                if (showPendingElements.Contains(element))
                 {
                     var rect = new Rect(position.x, position.y, 
                         element.Node.LayoutWidth, element.Node.LayoutHeight);
                     
                     childAnimator.AnimateChildAppear(element, null, rect);
                 }
-                else
+                else if(element.Node.HasNewLayout)
                 {
                     if (element.RectTransform.anchoredPosition != position)
                         childAnimator.AnimateChildMove(element, position);
@@ -441,11 +467,11 @@ namespace ThreeDISevenZeroR.XmlUI
                 element.OnLayoutUpdated();
             }
 
-            addedElements.Clear();
+            showPendingElements.Clear();
             childAnimator.StartAnimation();
         }
 
-        private Vector2 GetElementPosition(LayoutElement element)
+        private Vector2 GetElementPosition(XmlLayoutElement element)
         {
             var pivot = element.RectTransform.pivot;
             return new Vector2(element.Node.LayoutX, -element.Node.LayoutY);
@@ -457,74 +483,15 @@ namespace ThreeDISevenZeroR.XmlUI
                 return;
 
             yogaNode = new YogaNode();
-            UpdateMeasureElement();
+            
+            UpdateVisibility();
+            UpdateDirtyWatcher();
 
             foreach (var element in childElements)
                 yogaNode.AddChild(element.Node);
         }
 
-        private YogaSize MeasureElement(YogaNode node, 
-            float width, YogaMeasureMode widthmode, 
-            float height, YogaMeasureMode heightmode)
-        {
-            if (measuredElement is Text text)
-            {
-                if (string.IsNullOrWhiteSpace(text.text))
-                    return new YogaSize { width = 0, height = 0 };
-                
-                var horizontalSettings = text.GetGenerationSettings(Vector2.zero);
-                var textWidth = text.cachedTextGeneratorForLayout.GetPreferredWidth(
-                    text.text, horizontalSettings) / text.pixelsPerUnit;
-
-                var resultWidth = widthmode != YogaMeasureMode.Undefined ? 
-                    Mathf.Min(textWidth, width) : textWidth;
-
-                var verticalSettings = text.GetGenerationSettings(new Vector2(resultWidth, 0));
-                var textHeight = text.cachedTextGeneratorForLayout.GetPreferredHeight(
-                    text.text, verticalSettings) / text.pixelsPerUnit;
-
-                var resultHeight = heightmode != YogaMeasureMode.Undefined 
-                    ? Mathf.Min(textHeight, height) 
-                    : textHeight;
-                
-                return new YogaSize
-                {
-                    width = resultWidth,
-                    height = resultHeight
-                };
-            }
-            
-            if (measuredElement is ILayoutElement behaviour)
-            {
-                var measuredRectTransform = (RectTransform) measuredElement.transform;
-                var originalSize = measuredRectTransform.sizeDelta;
-                var size = originalSize;
-                
-                behaviour.CalculateLayoutInputHorizontal();
-                var preferredWidth = behaviour.preferredWidth;
-                size.x = Mathf.Min(preferredWidth, width);
-                measuredRectTransform.sizeDelta = size;
-                
-                behaviour.CalculateLayoutInputVertical();
-                var preferredHeight = behaviour.preferredHeight;
-                size.y = Mathf.Min(preferredHeight, height);
-                measuredRectTransform.sizeDelta = originalSize;
-
-                return new YogaSize
-                {
-                    width = size.x,
-                    height = size.y
-                };
-            }
-            
-            return new YogaSize
-            {
-                width = width,
-                height = height
-            };
-        }
-
-        private void SetParent(LayoutElement parent)
+        private void SetParent(XmlLayoutElement parent)
         {
             if (parentElement)
                 parentElement.RemoveChild(this);
@@ -543,36 +510,18 @@ namespace ThreeDISevenZeroR.XmlUI
             UpdateLayoutUpdater();
         }
         
-        private void MarkDirtyIfMeasuredElementChanged()
+        public void MarkDirty()
         {
-            if(!(measuredElement is ILayoutElement e))
-                return;
-            
-            if (e.preferredWidth != prevMeasureWidth || 
-                e.preferredHeight != prevMeasureHeight)
-            {
-                prevMeasureWidth = e.preferredWidth;
-                prevMeasureHeight = e.preferredHeight;
-                    
-                if(yogaNode != null && yogaNode.IsMeasureDefined)
-                    yogaNode.MarkDirty();
-            }
+            if(yogaNode != null && yogaNode.IsMeasureDefined)
+                yogaNode.MarkDirty();
         }
 
         private class YogaUpdater : MonoBehaviour
         {
-            public LayoutElement element;
+            public XmlLayoutElement element;
 
             private void Start() => element.CalculateLayout();
             private void Update() => element.CalculateLayout();
-        }
-        
-        private class YogaMeasureDirtyWatcher : UIBehaviour, ILayoutSelfController
-        {
-            public LayoutElement element;
-
-            public void SetLayoutHorizontal() => element.MarkDirtyIfMeasuredElementChanged();
-            public void SetLayoutVertical() => element.MarkDirtyIfMeasuredElementChanged();
         }
     }
 }

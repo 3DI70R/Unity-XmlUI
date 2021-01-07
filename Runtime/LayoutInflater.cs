@@ -8,16 +8,6 @@ namespace ThreeDISevenZeroR.XmlUI
 {
     public class LayoutInflater : MonoBehaviour
     {
-        private const char AttrsDelimeter = ',';
-
-        public const string AttrsReferenceAttributeId = "Attrs";
-        public const string AttrsCollectionNameAttributeId = "Attrs.Name";
-        public const string AttrsCollectionParentAttributeId = "Attrs.Parent";
-
-        public const string AttrsCollectionElementName = "AttributeCollection";
-        public const string AttrsCollectionEntryName = "Attrs";
-        public const string AttrsChildRootName = "ChildRoot";
-
         private readonly Dictionary<string, IXmlElementInfo> elementTypes =
             new Dictionary<string, IXmlElementInfo>();
         
@@ -30,11 +20,11 @@ namespace ThreeDISevenZeroR.XmlUI
         private readonly Dictionary<string, Dictionary<string, string>> flattenedAttributeDictionary =
             new Dictionary<string, Dictionary<string, string>>();
         
-        private readonly Dictionary<string, LayoutElement> createdPrefabs =
-            new Dictionary<string, LayoutElement>();
+        private readonly Dictionary<string, XmlLayoutElement> createdPrefabs =
+            new Dictionary<string, XmlLayoutElement>();
         
-        private readonly Dictionary<string, Stack<LayoutElement>> pooledObjects = 
-            new Dictionary<string, Stack<LayoutElement>>();
+        private readonly Dictionary<string, Stack<XmlLayoutElement>> pooledObjects = 
+            new Dictionary<string, Stack<XmlLayoutElement>>();
         
         private readonly List<PooledLayout> pooledElementsGetComponentList = 
             new List<PooledLayout>();
@@ -97,7 +87,7 @@ namespace ThreeDISevenZeroR.XmlUI
 
                 if (!pooledObjects.TryGetValue(pooled.Layout, out var stack))
                 {
-                    stack = new Stack<LayoutElement>();
+                    stack = new Stack<XmlLayoutElement>();
                     pooledObjects[pooled.Layout] = stack;
                 }
                 
@@ -112,14 +102,14 @@ namespace ThreeDISevenZeroR.XmlUI
                 pooledElementsGetComponentList[i].Element.OnReturnedToPool();
         }
         
-        public Layout<T> InflateChild<T>(LayoutElement parent, string layoutXml, IVariableProvider provider = null)
+        public Layout<T> InflateChild<T>(XmlLayoutElement parent, string layoutXml, IVariableProvider provider = null)
             where T : Component
         {
             var element = InflateChild(parent, layoutXml, provider);
             return new Layout<T>(element, element.GetComponent<T>());
         }
 
-        public LayoutElement InflateChild(LayoutElement parent, string xmlString,
+        public XmlLayoutElement InflateChild(XmlLayoutElement parent, string xmlString,
             IVariableProvider provider = null)
         {
             var child = Inflate(parent.ChildParentTransform, xmlString, provider);
@@ -134,12 +124,12 @@ namespace ThreeDISevenZeroR.XmlUI
             return new Layout<T>(element, element.GetComponent<T>());
         }
 
-        public LayoutElement Inflate(Transform root, string layoutXml,
+        public XmlLayoutElement Inflate(Transform root, string layoutXml,
             IVariableProvider provider = null, Dictionary<string, string> outerAttrs = null)
         {
             Init();
 
-            LayoutElement instance;
+            XmlLayoutElement instance;
 
             if (outerAttrs == null)
             {
@@ -179,7 +169,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return instance;
         }
 
-        public LayoutElement CreateXmlInstance(Transform root, string xmlString,
+        public XmlLayoutElement CreateXmlInstance(Transform root, string xmlString,
             Dictionary<string, string> outerAttrs)
         {
             Init();
@@ -219,9 +209,9 @@ namespace ThreeDISevenZeroR.XmlUI
                 return;
             }
 
-            if (doc.DocumentElement.Name != AttrsCollectionElementName)
+            if (doc.DocumentElement.Name != XmlUIUtils.AttrsCollectionElementName)
             {
-                Debug.LogError($"Unknown document element name {doc.DocumentElement.Name}, expected {AttrsCollectionElementName}");
+                Debug.LogError($"Unknown document element name {doc.DocumentElement.Name}, expected {XmlUIUtils.AttrsCollectionElementName}");
                 return;
             }
 
@@ -232,9 +222,9 @@ namespace ThreeDISevenZeroR.XmlUI
 
                 XmlElement elementNode = (XmlElement) childNode;
 
-                if (elementNode.Name == AttrsCollectionEntryName)
+                if (elementNode.Name == XmlUIUtils.AttrsCollectionEntryName)
                 {
-                    var attrName = elementNode.GetAttribute(AttrsCollectionNameAttributeId);
+                    var attrName = elementNode.GetAttribute(XmlUIUtils.AttrsCollectionNameAttributeId);
 
                     if (string.IsNullOrWhiteSpace(attrName))
                     {
@@ -247,9 +237,9 @@ namespace ThreeDISevenZeroR.XmlUI
                         ownAttrs = CollectAttributes(elementNode)
                     };
 
-                    if (node.ownAttrs.TryGetValue(AttrsCollectionParentAttributeId, out var parentAttrs))
+                    if (node.ownAttrs.TryGetValue(XmlUIUtils.AttrsCollectionParentAttributeId, out var parentAttrs))
                     {
-                        node.parent = parentAttrs.Split(AttrsDelimeter)
+                        node.parent = parentAttrs.Split(XmlUIUtils.AttrsDelimeter)
                             .Select(a => a.Trim())
                             .ToArray();
                     }
@@ -304,7 +294,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 result.ownAttrs = attrs;
                 result.childNodes = new List<ElementNode>();
 
-                if (element.Name == AttrsChildRootName)
+                if (element.Name == XmlUIUtils.AttrsChildRootName)
                     return result;
                 
                 var components = new List<IXmlComponentFactory>();
@@ -381,7 +371,7 @@ namespace ThreeDISevenZeroR.XmlUI
         {
             var result = CollectAttributes(element, outerAttrs);
 
-            if (result.TryGetValue(AttrsReferenceAttributeId, out var referencedAttrs))
+            if (result.TryGetValue(XmlUIUtils.AttrsReferenceAttributeId, out var referencedAttrs))
             {
                 foreach (var attr in GetAttributes(referencedAttrs))
                 {
@@ -425,7 +415,7 @@ namespace ThreeDISevenZeroR.XmlUI
                     AddAttrs(parentAttr);
             }
 
-            foreach (var attrId in attrListString.Split(AttrsDelimeter))
+            foreach (var attrId in attrListString.Split(XmlUIUtils.AttrsDelimeter))
             {
                 AddAttrs(attrId.Trim());
             }
@@ -451,7 +441,7 @@ namespace ThreeDISevenZeroR.XmlUI
             return type.CreateFactory(attrs);
         }
 
-        private LayoutElement CreateInstance(LayoutElement elementRoot, Transform root, 
+        private XmlLayoutElement CreateInstance(XmlLayoutElement elementRoot, Transform root, 
             ElementNode element, BoundAttributeCollection binders)
         {
             var instance = element.factory.CreateElement(root, binders, this, element.ownAttrs);
@@ -466,7 +456,7 @@ namespace ThreeDISevenZeroR.XmlUI
 
                 switch (node.type)
                 {
-                    case AttrsChildRootName:
+                    case XmlUIUtils.AttrsChildRootName:
                         elementRoot.Container = instance;
                         break;
 
@@ -503,13 +493,13 @@ namespace ThreeDISevenZeroR.XmlUI
         
         private class PooledLayout : MonoBehaviour
         {
-            public LayoutElement Element => element;
+            public XmlLayoutElement Element => element;
             public string Layout => layout;
             
-            private LayoutElement element;
+            private XmlLayoutElement element;
             private string layout;
 
-            public void SetElement(LayoutElement e, string layout)
+            public void SetElement(XmlLayoutElement e, string layout)
             {
                 this.element = e;
                 this.layout = layout;

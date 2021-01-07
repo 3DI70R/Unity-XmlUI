@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -18,7 +17,12 @@ namespace ThreeDISevenZeroR.XmlUI
 
                 if (placeholderAttrs == null)
                     placeholderAttrs = XmlUIUtils.GetPlaceholderAttrs(documentXml)
-                        .Select(a => new PlaceholderAttributeInfo { Name = a })
+                        .Select(a => new PlaceholderAttributeInfo
+                        {
+                            Name = a.placeholderName,
+                            ElementName = a.elementName,
+                            ElementAttribute = a.attributeName
+                        })
                         .ToList();
 
                 return originalAttrs.Concat(placeholderAttrs).ToArray();
@@ -30,7 +34,7 @@ namespace ThreeDISevenZeroR.XmlUI
             this.documentXml = documentXml;
         }
 
-        protected override LayoutElement CreateObject(Transform parent, BoundAttributeCollection binder,
+        protected override XmlLayoutElement CreateObject(Transform parent, BoundAttributeCollection binder,
             LayoutInflater inflater, Dictionary<string, string> outerAttrs)
         {
             var element = inflater.Inflate(parent, documentXml, null, outerAttrs);
@@ -41,9 +45,12 @@ namespace ThreeDISevenZeroR.XmlUI
             return element;
         }
         
-        private class PlaceholderAttributeInfo : IAttributeInfo
+        private class PlaceholderAttributeInfo : IPlaceholderAttributeInfo
         {
             public string Name { get; set; }
+            public string ElementName { get; set; }
+            public string ElementAttribute { get; set; }
+            
             public TypeInfo Type => AttributeType.String;
         }
     }

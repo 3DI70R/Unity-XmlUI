@@ -2,14 +2,20 @@
 
 namespace ThreeDISevenZeroR.XmlUI
 {
-    [CustomEditor(typeof(LayoutElement))]
+    [CustomEditor(typeof(XmlLayoutElement))]
     public class LayoutElementInspector : Editor
     {
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
 
-            var element = (LayoutElement) target;
+            var element = (XmlLayoutElement) target;
+
+            var visibility = element.Visibility;
+            var newVisibility = (Visibility) EditorGUILayout.EnumPopup(visibility);
+
+            if (visibility != newVisibility)
+                element.Visibility = newVisibility;
 
             EditorGUILayout.Space(8);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);

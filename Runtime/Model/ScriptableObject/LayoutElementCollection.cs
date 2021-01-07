@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Xml;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,34 +8,32 @@ namespace ThreeDISevenZeroR.XmlUI
     [CreateAssetMenu]
     public class LayoutElementCollection : ElementCollection
     {
-        [SerializeField]
-        private LayoutElement[] elements = new LayoutElement[0];
-        
+        public Entry[] individualElements = new Entry[0];
+        public TextAsset[] collections = new TextAsset[0];
+
         protected override void RegisterElements()
         {
-            foreach (var e in elements)
+            foreach (var e in individualElements)
             {
-                var xmlElement = new XmlSubLayoutElementInfo(e.elementName, e.layout.text)
-                    .AddGenericProperties();
+                AddElement(new XmlSubLayoutElementInfo(e.name, e.layoutXml.text)
+                    .AddGenericProperties());
+            }
 
-                if (e.addButton)
-                    xmlElement.AddComponent<Button>(AttributeHandlers.Selectable);
-
-                if (e.addOptionalBackground)
-                    xmlElement.AddOptionalBackground();
- 
-                AddElement(xmlElement);
+            foreach (var collection in collections)
+            {
+                foreach (var e in XmlUIUtils.GetElementsFromCollection(collection.text))
+                {
+                    AddElement(new XmlSubLayoutElementInfo(e.name, e.xmlContents)
+                        .AddGenericProperties());
+                }
             }
         }
         
         [Serializable]
-        private struct LayoutElement
+        public struct Entry
         {
-            public string elementName;
-            public TextAsset layout;
-            
-            public bool addButton;
-            public bool addOptionalBackground;
+            public string name;
+            public TextAsset layoutXml;
         }
     }
 }

@@ -34,6 +34,9 @@ namespace ThreeDISevenZeroR.XmlUI
 
             return attrs;
         }
+
+        public AttributeHandler<T> AddComponentReferenceAttr<C>(string name, ValueSetterDelegate<T, C> setter, bool isSerializable = true) =>
+            AddGenericAttr(AttributeType.String, name, (e, c, v) => setter(e, c, e.FindComponentById<C>(v)));
         
         public AttributeHandler<T> AddStringAttr(string name, ValueSetterDelegate<T, string> setter, bool isSerializable = true) => 
             AddGenericAttr(AttributeType.String, name, setter, isSerializable);
@@ -238,7 +241,7 @@ namespace ThreeDISevenZeroR.XmlUI
                 this.batchObject = batchObject;
             }
 
-            public IBoundVariable Bind(LayoutElement element, O instance, IVariableProvider provider)
+            public IBoundVariable Bind(XmlLayoutElement element, O instance, IVariableProvider provider)
             {
                 var boundVariables = new IBoundVariable[variableBinders.Length];
                 

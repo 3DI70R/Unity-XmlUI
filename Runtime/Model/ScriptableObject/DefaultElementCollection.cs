@@ -18,11 +18,15 @@ namespace ThreeDISevenZeroR.XmlUI
 
             AddElement(new XmlPrimitiveElementInfo("Text")
                 .AddGenericProperties()
-                .AddComponent<Text>((c, e) => c.font = font,
+                .AddComponent<Text>((c, e) =>
+                    {
+                        c.font = font;
+                        c.raycastTarget = false;
+                    },
                     AttributeHandlers.Text,
                     AttributeHandlers.Shadow,
                     AttributeHandlers.Graphic)
-                .SetMeasuredComponent<Text>());
+                .SetMeasuredComponent<Text, TextDirtyWatcher>());
 
             AddElement(new XmlPrimitiveElementInfo("Image")
                 .AddGenericProperties()
@@ -30,15 +34,22 @@ namespace ThreeDISevenZeroR.XmlUI
                     AttributeHandlers.Image,
                     AttributeHandlers.Shadow,
                     AttributeHandlers.Graphic));
-
-            AddElement(new XmlPrimitiveElementInfo("Mask")
-                .AddGenericProperties()
-                .AddComponent<Image>(AttributeHandlers.Image, AttributeHandlers.Graphic)
-                .AddComponent<Mask>(AttributeHandlers.Mask));
             
             AddElement(new XmlPrimitiveElementInfo("RectMask")
                 .AddGenericProperties()
                 .AddComponent<RectMask2D>());
+            
+            AddComponent(new XmlComponentInfo("Mask")
+                .AddComponent<Mask>(AttributeHandlers.Mask));
+            
+            AddComponent(new XmlComponentInfo("Button")
+                .AddComponent<Button>(AttributeHandlers.Selectable));
+            
+            AddComponent(new XmlComponentInfo("InputField")
+                .AddComponent<InputField>(AttributeHandlers.InputField, AttributeHandlers.Selectable));
+            
+            AddComponent(new XmlComponentInfo("Toggle")
+                .AddComponent<Toggle>(AttributeHandlers.Toggle, AttributeHandlers.Selectable));
         }
     }
 }
